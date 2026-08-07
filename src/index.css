@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Mitr", sans-serif;
+  --color-primary: #4285F4;
+  --color-primary-dark: #34A853;
+  --color-dark-bg: #0B0E14;
+  --color-glass: rgba(15, 23, 42, 0.6);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+}
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-white font-sans min-h-screen relative overflow-x-hidden;
+  }
+}
+
+/* Utilities for glassmorphism */
+.glass-panel {
+  @apply bg-glass backdrop-blur-xl border border-glass-border shadow-2xl;
+}
