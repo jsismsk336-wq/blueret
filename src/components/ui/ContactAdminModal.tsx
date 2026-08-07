@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { X, MessageSquare, Headset } from 'lucide-react';
-import toast from 'react-hot-toast';
+
 
 interface ContactAdminModalProps {
   isOpen: boolean;
@@ -55,7 +55,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
 
           <a
             href="https://discord.gg/y9erNcNNab"
-            onClick={(e) => {
+            onClick={() => {
               // Using specific developer discord link
             }}
             target="_blank"

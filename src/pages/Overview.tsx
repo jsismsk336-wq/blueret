@@ -9,7 +9,7 @@ import { PackageSettingsModal } from '../components/ui/PackageSettingsModal';
 import { PinModal } from '../components/ui/PinModal';
 
 export function Overview() {
-  const { partners, keys, packages, clearStockByDuration, resetRequests = [], approveReset, rejectReset } = useStore();
+  const { partners, keys, packages, clearStockByDuration } = useStore();
   const [refillingPackage, setRefillingPackage] = useState<{ days: number; label: string; cost: number } | null>(null);
   const [isPackageSettingsModalOpen, setIsPackageSettingsModalOpen] = useState(false);
   const [packageToClear, setPackageToClear] = useState<{ days: number; label: string; count: number } | null>(null);
