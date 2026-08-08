@@ -235,8 +235,9 @@ export function ResellerDashboard() {
         {packages.map((pkg) => {
           const stock = getStock(pkg.days);
           const qty = getQty(pkg.days);
-          const totalCost = pkg.cost * qty;
-          const canAfford = partner.balance >= pkg.cost; // can afford at least 1
+          const unitCost = partner.customPrices?.[pkg.days] ?? pkg.cost;
+          const totalCost = unitCost * qty;
+          const canAfford = partner.balance >= unitCost; // can afford at least 1
           const canAffordQty = partner.balance >= totalCost;
           const available = stock > 0 && canAfford;
 
@@ -282,7 +283,7 @@ export function ResellerDashboard() {
                     {pkg.label}
                   </div>
                   <div className={`text-xs mt-1.5 font-bold ${accentClass} inline-block px-2.5 py-1 rounded-md shadow-inner`}>
-                    {pkg.cost} เครดิต / คีย์
+                    {unitCost} เครดิต / คีย์
                   </div>
                 </div>
                 <div className={`text-xs px-2.5 py-1.5 rounded-xl font-bold shadow-sm ${
@@ -341,7 +342,7 @@ export function ResellerDashboard() {
                 ) : (
                   <>
                     <ShoppingCart size={16} />
-                    {!canAfford ? 'เครดิตไม่พอ' : stock === 0 ? 'สต็อกหมด' : !canAffordQty ? `ดึง ${Math.min(qty, Math.floor(partner.balance / pkg.cost), stock)} คีย์` : `ดึง ${qty} คีย์`}
+                    {!canAfford ? 'เครดิตไม่พอ' : stock === 0 ? 'สต็อกหมด' : !canAffordQty ? `ดึง ${Math.min(qty, Math.floor(partner.balance / unitCost), stock)} คีย์` : `ดึง ${qty} คีย์`}
                   </>
                 )}
               </button>

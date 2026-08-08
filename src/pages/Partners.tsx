@@ -4,6 +4,7 @@ import { RefreshCw, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AddPartnerModal } from '../components/ui/AddPartnerModal';
 import { ManageCreditModal } from '../components/ui/ManageCreditModal';
+import { CustomPriceModal } from '../components/ui/CustomPriceModal';
 import { ResetPasswordModal } from '../components/ui/ResetPasswordModal';
 import toast from 'react-hot-toast';
 
@@ -11,6 +12,7 @@ export function Partners() {
   const { partners, togglePartnerStatus, deletePartner } = useStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [managingCreditFor, setManagingCreditFor] = useState<string | null>(null);
+  const [managingCustomPricesFor, setManagingCustomPricesFor] = useState<string | null>(null);
   const [resettingPasswordFor, setResettingPasswordFor] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -98,6 +100,12 @@ export function Partners() {
                         จัดการเครดิต
                       </button>
                       <button 
+                        onClick={() => setManagingCustomPricesFor(partner.id)}
+                        className="px-3 py-1.5 rounded-lg border border-purple-500/20 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-all text-xs font-medium"
+                      >
+                        ตั้งราคา
+                      </button>
+                      <button 
                         onClick={() => setResettingPasswordFor(partner.id)}
                         className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700 transition-all text-xs font-medium"
                       >
@@ -143,6 +151,11 @@ export function Partners() {
       <ManageCreditModal 
         partnerId={managingCreditFor}
         onClose={() => setManagingCreditFor(null)}
+      />
+      
+      <CustomPriceModal
+        partnerId={managingCustomPricesFor}
+        onClose={() => setManagingCustomPricesFor(null)}
       />
       
       <ResetPasswordModal

@@ -11,6 +11,7 @@ export interface Partner {
   role: string;
   balance: number;
   status: 'active' | 'suspended';
+  customPrices?: Record<number, number>;
 }
 
 export interface LicenseKey {
@@ -61,6 +62,7 @@ interface AdminState {
   updatePartnerPassword: (id: string, newPassword: string) => void;
   togglePartnerStatus: (id: string) => void;
   deletePartner: (id: string) => void;
+  updatePartnerCustomPrices: (id: string, customPrices: Record<number, number>) => void;
 
   // Key management (admin)
   generateKey: (durationDays: number, cost: number, creator: string, amount?: number) => boolean;
@@ -94,8 +96,8 @@ const generateRandomString = (length: number) => {
 };
 
 const initialPartners: Partner[] = [
-  { id: '1', username: 'Seeyou', password: '123456', role: 'พาร์ทเนอร์พอร์ตทัล', balance: 100.0, status: 'active' },
-  { id: '2', username: 'devlucky', password: '123456', role: 'พาร์ทเนอร์พอร์ตทัล', balance: 90000000000000000, status: 'active' },
+  { id: '1', username: 'Seeyou', password: '123456', role: 'พาร์ทเนอร์พอร์ตทัล', balance: 100.0, status: 'active', customPrices: {} },
+  { id: '2', username: 'devlucky', password: '123456', role: 'พาร์ทเนอร์พอร์ตทัล', balance: 90000000000000000, status: 'active', customPrices: {} },
 ];
 
 const initialKeys: LicenseKey[] = [
@@ -170,6 +172,7 @@ export const useStore = create<AdminState>()(
           role: 'พาร์ทเนอร์พอร์ตทัล',
           balance: 0,
           status: 'active',
+          customPrices: {},
         };
         set({ partners: [...partners, newPartner] });
         setDoc(doc(db, 'partners', newPartner.id), newPartner);
@@ -212,6 +215,16 @@ export const useStore = create<AdminState>()(
         const { partners } = get();
         set({ partners: partners.filter(p => p.id !== id) });
         deleteDoc(doc(db, 'partners', id));
+      },
+
+      updatePartnerCustomPrices: (id, customPrices) => {
+        const { partners } = get();
+        set({
+          partners: partners.map(p =>
+            p.id === id ? { ...p, customPrices } : p
+          )
+        });
+        setDoc(doc(db, 'partners', id), { customPrices }, { merge: true });
       },
 
       // ─── KEY MANAGEMENT ──────────────────────────────────────────────────────
@@ -408,12 +421,13 @@ export const useStore = create<AdminState>()(
           const availableKeys = keys.filter(k => k.durationDays === durationDays && k.status === 'unused');
           if (availableKeys.length === 0) return 'no_stock';
 
-          const affordableQty = Math.floor(partner.balance / pkg.cost);
+          const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
+          const affordableQty = Math.floor(partner.balance / unitCost);
           const actualQty = Math.min(safeQty, availableKeys.length, affordableQty);
 
           if (actualQty === 0) return 'no_credit';
 
-          const totalCost = pkg.cost * actualQty;
+          const totalCost = unitCost * actualQty;
           const newBalance = partner.balance - totalCost;
           if (newBalance < 0) return 'no_credit';
 
