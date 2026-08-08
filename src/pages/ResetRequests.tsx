@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Check, X, Bell, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useState } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 
 export function ResetRequests() {
   const { resetRequests = [], approveReset, rejectReset } = useStore();
+  const { t, language } = useTranslation();
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
   const filteredRequests = resetRequests.filter(r => filter === 'all' || r.status === filter);
@@ -20,8 +22,8 @@ export function ResetRequests() {
             <RefreshCw size={12} className="text-orange-400" />
             <span className="text-xs font-bold text-orange-400">RESET REQUESTS</span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">คำขอรีเซ็ตคีย์</h1>
-          <p className="text-gray-400 text-sm">จัดการคำขอรีเซ็ต HWID จากตัวแทนจำหน่ายทั้งหมด</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('admin.resetRequestsTitle')}</h1>
+          <p className="text-gray-400 text-sm">{t('admin.resetRequestsDesc')}</p>
         </div>
       </div>
 
@@ -34,7 +36,7 @@ export function ResetRequests() {
               : 'bg-[#1C1F2E] text-gray-400 hover:text-white border border-transparent'
           }`}
         >
-          รออนุมัติ ({resetRequests.filter(r => r.status === 'pending').length})
+          {t('admin.filterPending')} ({resetRequests.filter(r => r.status === 'pending').length})
         </button>
         <button
           onClick={() => setFilter('approved')}
@@ -44,7 +46,7 @@ export function ResetRequests() {
               : 'bg-[#1C1F2E] text-gray-400 hover:text-white border border-transparent'
           }`}
         >
-          อนุมัติแล้ว
+          {t('admin.filterApproved')}
         </button>
         <button
           onClick={() => setFilter('rejected')}
@@ -54,7 +56,7 @@ export function ResetRequests() {
               : 'bg-[#1C1F2E] text-gray-400 hover:text-white border border-transparent'
           }`}
         >
-          ถูกปฏิเสธ
+          {t('admin.filterRejected')}
         </button>
         <button
           onClick={() => setFilter('all')}
@@ -64,7 +66,7 @@ export function ResetRequests() {
               : 'bg-[#1C1F2E] text-gray-400 hover:text-white border border-transparent'
           }`}
         >
-          ทั้งหมด
+          {t('admin.filterAll')}
         </button>
       </div>
 
@@ -77,7 +79,7 @@ export function ResetRequests() {
           <div className="w-16 h-16 bg-gray-800/50 rounded-2xl flex items-center justify-center mb-4">
             <Bell size={28} className="text-gray-600" />
           </div>
-          <p className="text-gray-400 font-medium">ไม่มีคำขอรีเซ็ตในหมวดหมู่นี้</p>
+          <p className="text-gray-400 font-medium">{t('admin.noRequests')}</p>
         </motion.div>
       ) : (
         <div className="relative z-10 space-y-3">
@@ -109,17 +111,19 @@ export function ResetRequests() {
                         req.status === 'approved' ? 'bg-green-500/20 text-green-400' :
                         'bg-red-500/20 text-red-400'
                       }`}>
-                        {req.status}
+                        {req.status === 'pending' ? t('admin.filterPending') : 
+                         req.status === 'approved' ? t('admin.filterApproved') : 
+                         t('admin.filterRejected')}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="text-xs text-gray-500 flex items-center gap-1">
                         <Clock size={11} />
-                        <span className="font-num">{new Date(req.createdAt).toLocaleString('th-TH')}</span>
+                        <span className="font-num">{new Date(req.createdAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US')}</span>
                       </span>
                       <span className="text-xs text-gray-500">•</span>
                       <span className="text-xs text-gray-400">
-                        จากตัวแทน: <span className="text-primary font-medium">{req.resellerName}</span>
+                        {t('admin.fromReseller')} <span className="text-primary font-medium">{req.resellerName}</span>
                       </span>
                     </div>
                   </div>
@@ -130,20 +134,20 @@ export function ResetRequests() {
                     <button
                       onClick={() => {
                         approveReset(req.id);
-                        toast.success(`อนุมัติคำขอรีเซ็ตคีย์ ${req.keyString} แล้ว`);
+                        toast.success(t('admin.approveSuccess', { key: req.keyString }));
                       }}
                       className="flex items-center gap-2 px-4 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 hover:border-green-500/40 rounded-xl text-sm font-medium transition-all"
                     >
-                      <Check size={16} /> อนุมัติ
+                      <Check size={16} /> {t('admin.approveBtn')}
                     </button>
                     <button
                       onClick={() => {
                         rejectReset(req.id);
-                        toast.error(`ปฏิเสธคำขอรีเซ็ตคีย์ ${req.keyString}`);
+                        toast.error(t('admin.rejectSuccess', { key: req.keyString }));
                       }}
                       className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-xl text-sm font-medium transition-all"
                     >
-                      <X size={16} /> ปฏิเสธ
+                      <X size={16} /> {t('admin.rejectBtn')}
                     </button>
                   </div>
                 )}

@@ -4,9 +4,11 @@ import { Search, RefreshCw, Trash2, ChevronLeft, ChevronRight, AlertTriangle } f
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { PinModal } from '../components/ui/PinModal';
+import { useTranslation } from '../hooks/useTranslation';
 
 export function Keys() {
   const { keys, partners, resetHwid, deleteKey, deleteAllKeys } = useStore();
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -50,15 +52,15 @@ export function Keys() {
             onClose={() => setIsPinModalOpen(false)} 
             onSuccess={() => {
               deleteAllKeys();
-              toast.success('ล้างคีย์ทั้งหมดออกจากระบบแล้ว');
+              toast.success(t('admin.deleteAllKeysSuccess'));
             }}
           />
         )}
       </AnimatePresence>
 
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-2">ระบบควบคุมคีย์ลิขสิทธิ์</h1>
-        <p className="text-gray-400 text-sm">ตรวจสอบความสมบูรณ์คีย์ระบบ, ผู้ร่วมสร้าง และจัดการล้างข้อมูลรหัสเครื่อง (HWID)</p>
+        <h1 className="text-2xl font-bold text-white mb-2">{t('admin.adminKeysTitle')}</h1>
+        <p className="text-gray-400 text-sm">{t('admin.adminKeysDesc')}</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -66,7 +68,7 @@ export function Keys() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
           <input 
             type="text" 
-            placeholder="ค้นหาตาม คีย์ลิขสิทธิ์, ชื่อพาร์ทเนอร์ หรือ HWID ของลูกค้า..." 
+            placeholder={t('admin.searchPlaceholderAdmin')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -81,20 +83,20 @@ export function Keys() {
             className="flex items-center gap-2 px-4 py-3 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 rounded-xl font-medium transition-colors"
           >
             <AlertTriangle size={18} />
-            ล้างคีย์ทั้งหมด
+            {t('admin.deleteAllKeys')}
           </button>
           <button 
             onClick={() => {
               setIsRefreshing(true);
               setTimeout(() => {
                 setIsRefreshing(false);
-                toast.success('อัปเดตข้อมูลคีย์ล่าสุดแล้ว');
+                toast.success(t('admin.refreshKeysSuccess'));
               }, 600);
             }}
             className="flex items-center gap-2 px-4 py-3 bg-[#161925] text-gray-300 border border-gray-800/60 hover:text-white rounded-xl font-medium transition-colors"
           >
             <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-            รีเฟรชข้อมูล
+            {t('admin.refreshData')}
           </button>
         </div>
       </div>
@@ -104,12 +106,12 @@ export function Keys() {
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-[#1C1F2E] text-gray-400 text-xs tracking-wider border-b border-gray-800/60">
               <tr>
-                <th className="px-6 py-4 font-medium">คีย์ลิขสิทธิ์ (LICENSE KEY)</th>
-                <th className="px-6 py-4 font-medium text-center">อายุคีย์</th>
-                <th className="px-6 py-4 font-medium text-center">สร้างโดย</th>
-                <th className="px-6 py-4 font-medium text-center">สถานะคีย์</th>
-                <th className="px-6 py-4 font-medium">รหัสประจำเครื่องลูกค้า (HWID)</th>
-                <th className="px-6 py-4 font-medium text-right">การจัดการคีย์</th>
+                <th className="px-6 py-4 font-medium">{t('admin.licenseCol')}</th>
+                <th className="px-6 py-4 font-medium text-center">{t('admin.durationCol')}</th>
+                <th className="px-6 py-4 font-medium text-center">{t('admin.createdByCol')}</th>
+                <th className="px-6 py-4 font-medium text-center">{t('admin.keyStatusCol')}</th>
+                <th className="px-6 py-4 font-medium">{t('admin.hwidCol')}</th>
+                <th className="px-6 py-4 font-medium text-right">{t('admin.keyActionCol')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/60">
@@ -127,17 +129,17 @@ export function Keys() {
                   <td className="px-6 py-4 text-center">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(key.status)}`}>
                       <div className={`w-1.5 h-1.5 rounded-full ${key.status === 'active' ? 'bg-green-400' : 'bg-blue-400'}`}></div>
-                      {key.status === 'active' ? 'กำลังใช้งาน' : 'ยังไม่ใช้งาน'}
+                      {key.status === 'active' ? t('admin.statusInUse') : t('reseller.unused')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className={`font-mono text-xs ${key.hwid ? 'text-green-400' : 'text-gray-600'}`}>
-                        {key.hwid || 'NOT BOUND'}
+                        {key.hwid || t('admin.notBound')}
                       </span>
                       {key.redeemedBy && (
                         <span className="text-[10px] text-gray-400 mt-1">
-                          ดึงโดย: <span className="text-blue-400 font-bold">{partners.find(p => p.id === key.redeemedBy)?.username || 'Unknown'}</span>
+                          {t('admin.pulledBy')} <span className="text-blue-400 font-bold">{partners.find(p => p.id === key.redeemedBy)?.username || t('admin.unknown')}</span>
                         </span>
                       )}
                     </div>
@@ -147,7 +149,7 @@ export function Keys() {
                       <button
                         onClick={() => {
                           resetHwid(key.id);
-                          toast.success('ล้าง HWID สำเร็จ');
+                          toast.success(t('admin.resetHwidSuccess'));
                         }}
                         disabled={!key.hwid}
                         className={`px-3 py-1.5 rounded-lg border transition-all text-xs font-medium ${
@@ -156,12 +158,12 @@ export function Keys() {
                             : 'border-transparent text-gray-600 cursor-not-allowed'
                         }`}
                       >
-                        ล้าง HWID
+                        {t('admin.resetHwidBtn')}
                       </button>
                       <button
                         onClick={() => {
                           deleteKey(key.id);
-                          toast.success('ลบคีย์ออกจากระบบแล้ว');
+                          toast.success(t('admin.deleteKeySuccess'));
                         }}
                         className="p-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all"
                       >
@@ -179,9 +181,9 @@ export function Keys() {
               <div className="w-16 h-16 rounded-full bg-[#1C1F2E] flex items-center justify-center mb-4 text-gray-500">
                 <Search size={24} />
               </div>
-              <h3 className="text-white font-bold mb-1">ไม่พบข้อมูลคีย์ลิขสิทธิ์</h3>
+              <h3 className="text-white font-bold mb-1">{t('admin.noKeysFound')}</h3>
               <p className="text-sm text-gray-400 max-w-[250px]">
-                {search ? 'ลองค้นหาด้วยคำอื่นดูอีกครั้ง' : 'ยังไม่มีการสร้างคีย์ลิขสิทธิ์ในระบบ'}
+                {search ? t('admin.searchTryAgain') : t('admin.noKeysExist')}
               </p>
             </div>
           )}
@@ -190,7 +192,7 @@ export function Keys() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-800/60 bg-[#1C1F2E]/30">
             <span className="text-xs text-gray-400">
-              แสดง <span className="text-white font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> ถึง <span className="text-white font-medium">{Math.min(currentPage * itemsPerPage, filteredKeys.length)}</span> จากทั้งหมด <span className="text-white font-medium">{filteredKeys.length}</span> รายการ
+              {t('admin.showing')} <span className="text-white font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> {t('admin.to')} <span className="text-white font-medium">{Math.min(currentPage * itemsPerPage, filteredKeys.length)}</span> {t('admin.ofTotal')} <span className="text-white font-medium">{filteredKeys.length}</span> {t('admin.items')}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -201,7 +203,7 @@ export function Keys() {
                 <ChevronLeft size={16} />
               </button>
               <span className="text-xs font-medium text-gray-400 px-2">
-                หน้าที่ {currentPage} จาก {totalPages}
+                {t('admin.page')} {currentPage} {t('admin.ofPages')} {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
