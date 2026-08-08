@@ -60,11 +60,13 @@ interface AdminState {
   keys: LicenseKey[];
   packages: Package[];
   resetRequests: ResetRequest[];
-  currentUser: Partner | 'admin' | null;
+  currentAdmin: boolean;
+  currentReseller: Partner | null;
 
   // Auth
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
-  logout: () => void;
+  logoutAdmin: () => void;
+  logoutReseller: () => void;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -138,13 +140,14 @@ export const useStore = create<AdminState>()(
       keys: initialKeys,
       packages: initialPackages,
       resetRequests: [],
-      currentUser: null,
+      currentAdmin: false,
+      currentReseller: null,
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
         // Check admin
         if (username === 'admin' && password === 'admin1234') {
-          set({ currentUser: 'admin' });
+          set({ currentAdmin: true });
           generateCsrfToken(); // generate fresh token on login
           return 'admin';
         }
@@ -155,16 +158,21 @@ export const useStore = create<AdminState>()(
         const partner = partners.find(p => p.username.trim().toLowerCase() === safeUser && p.password === safePass);
         if (partner) {
           if (partner.status === 'suspended') return 'error';
-          set({ currentUser: partner });
+          set({ currentReseller: partner });
           generateCsrfToken(); // generate fresh token on login
           return 'reseller';
         }
         return 'error';
       },
 
-      logout: () => {
-        set({ currentUser: null });
-        generateCsrfToken(); // rotate token on logout
+      logoutAdmin: () => {
+        set({ currentAdmin: false });
+        generateCsrfToken();
+      },
+
+      logoutReseller: () => {
+        set({ currentReseller: null });
+        generateCsrfToken();
       },
 
       // ─── PARTNER CRUD ────────────────────────────────────────────────────────
@@ -279,8 +287,8 @@ export const useStore = create<AdminState>()(
 
       // ─── RESET REQUESTS MANAGEMENT ───────────────────────────────────────────
       requestReset: (keyId, keyString) => {
-        const { currentUser, resetRequests } = get();
-        if (!currentUser || currentUser === 'admin') return;
+        const { currentReseller, resetRequests } = get();
+        if (!currentReseller) return;
         
         // Prevent duplicate pending requests for the same key
         if (resetRequests.some(r => r.keyId === keyId && r.status === 'pending')) {
@@ -291,8 +299,8 @@ export const useStore = create<AdminState>()(
           id: generateRandomString(10),
           keyId,
           keyString,
-          resellerId: currentUser.id,
-          resellerName: currentUser.username,
+          resellerId: currentReseller.id,
+          resellerName: currentReseller.username,
           status: 'pending',
           createdAt: Date.now(),
         };
@@ -372,13 +380,13 @@ export const useStore = create<AdminState>()(
           }
 
           // Now read the updated in-memory state
-          const { currentUser, keys, partners, packages } = get();
-          if (!currentUser || currentUser === 'admin') return 'no_credit';
+          const { currentReseller, keys, partners, packages } = get();
+          if (!currentReseller) return 'no_credit';
 
           const pkg = packages.find(p => p.days === durationDays);
           if (!pkg) return 'no_stock';
 
-          const partner = partners.find(p => p.id === currentUser.id);
+          const partner = partners.find(p => p.id === currentReseller.id);
           if (!partner || partner.status === 'suspended') return 'no_credit';
 
           // 4. Check stock using FRESH keys from localStorage
@@ -409,7 +417,7 @@ export const useStore = create<AdminState>()(
                 ? { ...k, status: 'active' as const, redeemedBy: partner.id, redeemedAt: now }
                 : k
             ),
-            currentUser: { ...partner, balance: newBalance },
+            currentReseller: { ...partner, balance: newBalance },
           });
 
           // 7. Broadcast redeemed key IDs to ALL other open tabs immediately
@@ -437,7 +445,8 @@ export const useStore = create<AdminState>()(
         packages: state.packages,
         resetRequests: state.resetRequests,
         adminBalance: state.adminBalance,
-        currentUser: state.currentUser, // เซฟเซสชั่นเพื่อให้รีเฟรชแล้วไม่หลุด
+        currentAdmin: state.currentAdmin,
+        currentReseller: state.currentReseller,
       }),
     }
   )

@@ -8,9 +8,9 @@ import { Navigate } from 'react-router-dom';
 
 export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const currentUser = useStore(s => s.currentUser);
+  const currentAdmin = useStore(s => s.currentAdmin);
 
-  if (currentUser !== 'admin') {
+  if (!currentAdmin) {
     return <Navigate to="/" replace />;
   }
 

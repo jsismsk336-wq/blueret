@@ -8,19 +8,19 @@ import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 export function ResellerLayout() {
-  const { currentUser, logout } = useStore();
+  const { currentReseller, logoutReseller } = useStore();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
-  if (!currentUser || currentUser === 'admin') {
+  if (!currentReseller) {
     return <Navigate to="/" replace />;
   }
 
-  const partner = currentUser;
+  const partner = currentReseller;
 
   const handleLogout = () => {
-    logout();
+    logoutReseller();
     toast.success('ออกจากระบบเรียบร้อย');
     navigate('/');
   };

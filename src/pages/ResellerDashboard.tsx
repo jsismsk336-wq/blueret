@@ -129,7 +129,7 @@ function QuantityPicker({ value, onChange }: { value: number; onChange: (v: numb
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export function ResellerDashboard() {
-  const { currentUser, packages, keys, redeemKey } = useStore();
+  const { currentReseller, packages, keys, redeemKey } = useStore();
   const [resultKeys, setResultKeys] = useState<LicenseKey[] | null>(null);
   const [redeemingDays, setRedeemingDays] = useState<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number>(0);
@@ -141,7 +141,7 @@ export function ResellerDashboard() {
     return cleanup;
   }, []);
 
-  const partner = currentUser !== 'admin' ? currentUser : null;
+  const partner = currentReseller;
   if (!partner) return null;
 
   const getStock = (days: number) => keys.filter(k => k.durationDays === days && k.status === 'unused').length;

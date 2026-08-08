@@ -6,12 +6,12 @@ import { PinModal } from '../components/ui/PinModal';
 import { useStore } from '../store/useStore';
 
 export function ResellerHistory() {
-  const { currentUser, keys, resetRequests = [], requestReset } = useStore();
+  const { currentReseller, keys, resetRequests = [], requestReset } = useStore();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [resetKeyTarget, setResetKeyTarget] = useState<{id: string, keyString: string} | null>(null);
 
-  const partner = currentUser !== 'admin' ? currentUser : null;
+  const partner = currentReseller;
   if (!partner) return null;
 
   // Filter keys pulled by this reseller

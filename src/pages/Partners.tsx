@@ -4,12 +4,14 @@ import { RefreshCw, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AddPartnerModal } from '../components/ui/AddPartnerModal';
 import { ManageCreditModal } from '../components/ui/ManageCreditModal';
+import { ResetPasswordModal } from '../components/ui/ResetPasswordModal';
 import toast from 'react-hot-toast';
 
 export function Partners() {
   const { partners, togglePartnerStatus, deletePartner, updatePartnerPassword } = useStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [managingCreditFor, setManagingCreditFor] = useState<string | null>(null);
+  const [resettingPasswordFor, setResettingPasswordFor] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = () => {
@@ -17,16 +19,7 @@ export function Partners() {
     setTimeout(() => {
       setIsRefreshing(false);
       toast.success('อัปเดตข้อมูลพาร์ทเนอร์ล่าสุดแล้ว');
-    }, 600);
-  };
 
-  const handleResetPassword = (id: string, username: string) => {
-    const newPass = window.prompt(`ตั้งรหัสผ่านใหม่สำหรับพาร์ทเนอร์: ${username}\n(เว้นว่างไว้เพื่อยกเลิก)`);
-    if (newPass && newPass.trim() !== '') {
-      updatePartnerPassword(id, newPass.trim());
-      toast.success(`รีเซ็ตรหัสผ่านของ ${username} สำเร็จ!\nรหัสผ่านใหม่: ${newPass.trim()}`, { duration: 5000 });
-    }
-  };
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -104,7 +97,7 @@ export function Partners() {
                         จัดการเครดิต
                       </button>
                       <button 
-                        onClick={() => handleResetPassword(partner.id, partner.username)}
+                        onClick={() => setResettingPasswordFor(partner.id)}
                         className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700 transition-all text-xs font-medium"
                       >
                         รีเซ็ตรหัส
@@ -149,6 +142,11 @@ export function Partners() {
       <ManageCreditModal 
         partnerId={managingCreditFor}
         onClose={() => setManagingCreditFor(null)}
+      />
+      
+      <ResetPasswordModal
+        partnerId={resettingPasswordFor}
+        onClose={() => setResettingPasswordFor(null)}
       />
     </div>
   );

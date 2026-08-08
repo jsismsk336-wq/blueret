@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { PinModal } from '../components/ui/PinModal';
 
 export function Keys() {
-  const { keys, resetHwid, deleteKey, deleteAllKeys } = useStore();
+  const { keys, partners, resetHwid, deleteKey, deleteAllKeys } = useStore();
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -131,9 +131,16 @@ export function Keys() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`font-mono text-xs ${key.hwid ? 'text-green-400' : 'text-gray-600'}`}>
-                      {key.hwid || 'NOT BOUND'}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className={`font-mono text-xs ${key.hwid ? 'text-green-400' : 'text-gray-600'}`}>
+                        {key.hwid || 'NOT BOUND'}
+                      </span>
+                      {key.redeemedBy && (
+                        <span className="text-[10px] text-gray-400 mt-1">
+                          ดึงโดย: <span className="text-blue-400 font-bold">{partners.find(p => p.id === key.redeemedBy)?.username || 'Unknown'}</span>
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
