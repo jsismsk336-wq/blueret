@@ -8,7 +8,7 @@ import { ResetPasswordModal } from '../components/ui/ResetPasswordModal';
 import toast from 'react-hot-toast';
 
 export function Partners() {
-  const { partners, togglePartnerStatus, deletePartner, updatePartnerPassword } = useStore();
+  const { partners, togglePartnerStatus, deletePartner } = useStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [managingCreditFor, setManagingCreditFor] = useState<string | null>(null);
   const [resettingPasswordFor, setResettingPasswordFor] = useState<string | null>(null);
@@ -19,7 +19,8 @@ export function Partners() {
     setTimeout(() => {
       setIsRefreshing(false);
       toast.success('อัปเดตข้อมูลพาร์ทเนอร์ล่าสุดแล้ว');
-
+    }, 600);
+  };
 
   return (
     <div className="animate-in fade-in duration-500">
