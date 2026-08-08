@@ -451,3 +451,12 @@ export const useStore = create<AdminState>()(
     }
   )
 );
+
+// Cross-tab synchronization
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'blueret-storage') {
+      useStore.persist.rehydrate();
+    }
+  });
+}
