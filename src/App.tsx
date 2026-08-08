@@ -10,8 +10,14 @@ import { Settings } from './pages/Settings';
 import { ResellerDashboard } from './pages/ResellerDashboard';
 import { ResellerHistory } from './pages/ResellerHistory';
 import { ResetRequests } from './pages/ResetRequests';
+import { initFirebaseSync } from './store/useStore';
+import { useEffect } from 'react';
 
 function App() {
+  useEffect(() => {
+    initFirebaseSync();
+  }, []);
+
   return (
     <>
       <Toaster 

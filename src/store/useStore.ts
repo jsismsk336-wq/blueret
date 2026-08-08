@@ -1,21 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { generateCsrfToken, validateCsrfToken, acquireRedeemLock, releaseRedeemLock } from '../utils/security';
-
-// BroadcastChannel for cross-tab key sync
-const _channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('blueret-keys') : null;
-
-// Helper: read freshest keys directly from localStorage (bypasses in-memory state)
-function getFreshKeysFromStorage(): LicenseKey[] | null {
-  try {
-    const raw = localStorage.getItem('blueret-storage');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.state?.keys ?? null;
-  } catch {
-    return null;
-  }
-}
+import { doc, getDoc, setDoc, deleteDoc, writeBatch, onSnapshot, collection } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export interface Partner {
   id: string;
@@ -34,8 +21,8 @@ export interface LicenseKey {
   status: 'unused' | 'active';
   hwid: string | null;
   createdBy: string;
-  redeemedBy: string | null;   // partner id who pulled this key
-  redeemedAt: number | null;   // timestamp when pulled
+  redeemedBy: string | null;
+  redeemedAt: number | null;
 }
 
 export interface Package {
@@ -136,22 +123,20 @@ export const useStore = create<AdminState>()(
   persist(
     (set, get) => ({
       adminBalance: 90000000000000000,
-      partners: initialPartners,
-      keys: initialKeys,
-      packages: initialPackages,
+      partners: [],
+      keys: [],
+      packages: [],
       resetRequests: [],
       currentAdmin: false,
       currentReseller: null,
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
-        // Check admin
         if (username === 'admin' && password === 'admin1234') {
           set({ currentAdmin: true });
-          generateCsrfToken(); // generate fresh token on login
+          generateCsrfToken();
           return 'admin';
         }
-        // Check partners
         const { partners } = get();
         const safeUser = username.trim().toLowerCase();
         const safePass = password.trim();
@@ -159,7 +144,7 @@ export const useStore = create<AdminState>()(
         if (partner) {
           if (partner.status === 'suspended') return 'error';
           set({ currentReseller: partner });
-          generateCsrfToken(); // generate fresh token on login
+          generateCsrfToken();
           return 'reseller';
         }
         return 'error';
@@ -179,7 +164,7 @@ export const useStore = create<AdminState>()(
       addPartner: (username, password) => {
         const { partners } = get();
         const newPartner: Partner = {
-          id: Math.random().toString(36).substr(2, 9),
+          id: Math.random().toString(36).substring(2, 11),
           username,
           password,
           role: 'พาร์ทเนอร์พอร์ตทัล',
@@ -187,6 +172,7 @@ export const useStore = create<AdminState>()(
           status: 'active',
         };
         set({ partners: [...partners, newPartner] });
+        setDoc(doc(db, 'partners', newPartner.id), newPartner);
       },
 
       updatePartnerBalance: (id, amount) => {
@@ -196,6 +182,7 @@ export const useStore = create<AdminState>()(
             p.id === id ? { ...p, balance: amount } : p
           )
         });
+        setDoc(doc(db, 'partners', id), { balance: amount }, { merge: true });
       },
 
       updatePartnerPassword: (id, newPassword) => {
@@ -205,20 +192,26 @@ export const useStore = create<AdminState>()(
             p.id === id ? { ...p, password: newPassword } : p
           )
         });
+        setDoc(doc(db, 'partners', id), { password: newPassword }, { merge: true });
       },
 
       togglePartnerStatus: (id) => {
         const { partners } = get();
+        const partner = partners.find(p => p.id === id);
+        if (!partner) return;
+        const newStatus = partner.status === 'active' ? 'suspended' : 'active';
         set({
           partners: partners.map(p =>
-            p.id === id ? { ...p, status: p.status === 'active' ? 'suspended' : 'active' } : p
+            p.id === id ? { ...p, status: newStatus } : p
           )
         });
+        setDoc(doc(db, 'partners', id), { status: newStatus }, { merge: true });
       },
 
       deletePartner: (id) => {
         const { partners } = get();
         set({ partners: partners.filter(p => p.id !== id) });
+        deleteDoc(doc(db, 'partners', id));
       },
 
       // ─── KEY MANAGEMENT ──────────────────────────────────────────────────────
@@ -240,10 +233,19 @@ export const useStore = create<AdminState>()(
           redeemedAt: null,
         }));
 
+        const newBalance = adminBalance - totalCost;
         set({
-          adminBalance: adminBalance - totalCost,
+          adminBalance: newBalance,
           keys: [...newKeys, ...keys],
         });
+
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'config', 'global'), { adminBalance: newBalance }, { merge: true });
+        newKeys.forEach(k => {
+          batch.set(doc(db, 'keys', k.id), k);
+        });
+        batch.commit();
+
         return true;
       },
 
@@ -262,6 +264,12 @@ export const useStore = create<AdminState>()(
         }));
 
         set({ keys: [...newKeys, ...keys] });
+        
+        const batch = writeBatch(db);
+        newKeys.forEach(k => {
+          batch.set(doc(db, 'keys', k.id), k);
+        });
+        batch.commit();
       },
 
       resetHwid: (id) => {
@@ -269,20 +277,35 @@ export const useStore = create<AdminState>()(
         set({
           keys: keys.map(k => k.id === id ? { ...k, hwid: null, status: 'unused' as const } : k),
         });
+        setDoc(doc(db, 'keys', id), { hwid: null, status: 'unused' }, { merge: true });
       },
 
       deleteKey: (id) => {
         const { keys } = get();
         set({ keys: keys.filter(k => k.id !== id) });
+        deleteDoc(doc(db, 'keys', id));
       },
 
       deleteAllKeys: () => {
+        const { keys } = get();
         set({ keys: [] });
+        const batch = writeBatch(db);
+        keys.forEach(k => {
+          batch.delete(doc(db, 'keys', k.id));
+        });
+        batch.commit();
       },
 
       clearStockByDuration: (durationDays) => {
         const { keys } = get();
+        const keysToRemove = keys.filter(k => k.durationDays === durationDays && k.status === 'unused');
         set({ keys: keys.filter(k => !(k.durationDays === durationDays && k.status === 'unused')) });
+        
+        const batch = writeBatch(db);
+        keysToRemove.forEach(k => {
+          batch.delete(doc(db, 'keys', k.id));
+        });
+        batch.commit();
       },
 
       // ─── RESET REQUESTS MANAGEMENT ───────────────────────────────────────────
@@ -290,7 +313,6 @@ export const useStore = create<AdminState>()(
         const { currentReseller, resetRequests } = get();
         if (!currentReseller) return;
         
-        // Prevent duplicate pending requests for the same key
         if (resetRequests.some(r => r.keyId === keyId && r.status === 'pending')) {
           return;
         }
@@ -306,6 +328,7 @@ export const useStore = create<AdminState>()(
         };
 
         set({ resetRequests: [newRequest, ...resetRequests] });
+        setDoc(doc(db, 'resetRequests', newRequest.id), newRequest);
       },
 
       approveReset: (requestId) => {
@@ -313,17 +336,19 @@ export const useStore = create<AdminState>()(
         const request = resetRequests.find(r => r.id === requestId);
         
         if (request && request.status === 'pending') {
-          // Reset the HWID
           const newKeys = keys.map(k => 
-            k.id === request.keyId ? { ...k, hwid: null, status: 'unused' as const } : k
+            k.id === request.keyId ? { ...k, hwid: null } : k
           );
-          
-          // Update request status
           const newRequests = resetRequests.map(r =>
             r.id === requestId ? { ...r, status: 'approved' as const } : r
           );
 
           set({ keys: newKeys, resetRequests: newRequests });
+          
+          const batch = writeBatch(db);
+          batch.set(doc(db, 'keys', request.keyId), { hwid: null }, { merge: true });
+          batch.set(doc(db, 'resetRequests', requestId), { status: 'approved' }, { merge: true });
+          batch.commit();
         }
       },
 
@@ -334,6 +359,7 @@ export const useStore = create<AdminState>()(
             r.id === requestId ? { ...r, status: 'rejected' as const } : r
           )
         });
+        setDoc(doc(db, 'resetRequests', requestId), { status: 'rejected' }, { merge: true });
       },
 
       // ─── PACKAGE MANAGEMENT ──────────────────────────────────────────────────
@@ -344,6 +370,7 @@ export const useStore = create<AdminState>()(
             pkg.days === days ? { ...pkg, cost: newCost } : pkg
           )
         });
+        setDoc(doc(db, 'packages', days.toString()), { cost: newCost }, { merge: true });
       },
 
       addPackage: (pkg) => {
@@ -351,36 +378,25 @@ export const useStore = create<AdminState>()(
         if (!packages.find(p => p.days === pkg.days)) {
           const newPackages = [...packages, pkg].sort((a, b) => a.days - b.days);
           set({ packages: newPackages });
+          setDoc(doc(db, 'packages', pkg.days.toString()), pkg);
         }
       },
 
       deletePackage: (days) => {
         const { packages } = get();
         set({ packages: packages.filter(p => p.days !== days) });
+        deleteDoc(doc(db, 'packages', days.toString()));
       },
 
       // ─── RESELLER ACTIONS ─────────────────────────────────────────────────────
       redeemKey: (durationDays, quantity, csrfToken) => {
-        // 1. CSRF validation
         if (!validateCsrfToken(csrfToken)) return 'csrf_error';
-
-        // 2. Mutex lock - prevent race conditions / double-tap
         if (!acquireRedeemLock()) return 'locked';
 
         try {
           const safeQty = Math.max(1, Math.min(50, Math.floor(quantity)));
-
-          // 3. *** CROSS-TAB PROTECTION ***
-          // Re-read keys directly from localStorage to see changes made by OTHER tabs/resellers
-          const freshKeys = getFreshKeysFromStorage();
-
-          // Merge fresh keys into in-memory store so we work with absolute latest state
-          if (freshKeys) {
-            set((state) => ({ ...state, keys: freshKeys }));
-          }
-
-          // Now read the updated in-memory state
           const { currentReseller, keys, partners, packages } = get();
+          
           if (!currentReseller) return 'no_credit';
 
           const pkg = packages.find(p => p.days === durationDays);
@@ -389,11 +405,9 @@ export const useStore = create<AdminState>()(
           const partner = partners.find(p => p.id === currentReseller.id);
           if (!partner || partner.status === 'suspended') return 'no_credit';
 
-          // 4. Check stock using FRESH keys from localStorage
           const availableKeys = keys.filter(k => k.durationDays === durationDays && k.status === 'unused');
           if (availableKeys.length === 0) return 'no_stock';
 
-          // 5. Calculate how many we can actually redeem
           const affordableQty = Math.floor(partner.balance / pkg.cost);
           const actualQty = Math.min(safeQty, availableKeys.length, affordableQty);
 
@@ -407,7 +421,6 @@ export const useStore = create<AdminState>()(
           const redeemedIds = new Set(keysToRedeem.map(k => k.id));
           const now = Date.now();
 
-          // 6. Atomic single set() — all or nothing, writes to localStorage immediately
           set({
             partners: partners.map(p =>
               p.id === partner.id ? { ...p, balance: newBalance } : p
@@ -420,15 +433,17 @@ export const useStore = create<AdminState>()(
             currentReseller: { ...partner, balance: newBalance },
           });
 
-          // 7. Broadcast redeemed key IDs to ALL other open tabs immediately
-          _channel?.postMessage({
-            type: 'KEYS_REDEEMED',
-            redeemedIds: [...redeemedIds],
-            partnerId: partner.id,
-            timestamp: now,
+          const batch = writeBatch(db);
+          batch.set(doc(db, 'partners', partner.id), { balance: newBalance }, { merge: true });
+          keysToRedeem.forEach(k => {
+            batch.set(doc(db, 'keys', k.id), {
+              status: 'active',
+              redeemedBy: partner.id,
+              redeemedAt: now
+            }, { merge: true });
           });
+          batch.commit();
 
-          // 8. Rotate CSRF token
           generateCsrfToken();
 
           return keysToRedeem.map(k => ({ ...k, status: 'active' as const, redeemedBy: partner.id, redeemedAt: now }));
@@ -439,12 +454,8 @@ export const useStore = create<AdminState>()(
     }),
     {
       name: 'blueret-storage',
+      // Only persist local auth state
       partialize: (state) => ({
-        partners: state.partners,
-        keys: state.keys,
-        packages: state.packages,
-        resetRequests: state.resetRequests,
-        adminBalance: state.adminBalance,
         currentAdmin: state.currentAdmin,
         currentReseller: state.currentReseller,
       }),
@@ -452,11 +463,52 @@ export const useStore = create<AdminState>()(
   )
 );
 
-// Cross-tab synchronization
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'blueret-storage') {
-      useStore.persist.rehydrate();
+export async function initFirebaseSync() {
+  const globalConfigRef = doc(db, 'config', 'global');
+  const globalConfigSnap = await getDoc(globalConfigRef);
+
+  if (!globalConfigSnap.exists()) {
+    const batch = writeBatch(db);
+    batch.set(globalConfigRef, { adminBalance: 90000000000000000 });
+    
+    initialPartners.forEach(p => {
+      batch.set(doc(db, 'partners', p.id), p);
+    });
+    
+    initialKeys.forEach(k => {
+      batch.set(doc(db, 'keys', k.id), k);
+    });
+    
+    initialPackages.forEach(p => {
+      batch.set(doc(db, 'packages', p.days.toString()), p);
+    });
+    
+    await batch.commit();
+  }
+
+  onSnapshot(globalConfigRef, (docSnap: any) => {
+    if (docSnap.exists()) {
+      useStore.setState({ adminBalance: docSnap.data().adminBalance });
     }
+  });
+
+  onSnapshot(collection(db, 'partners'), (snapshot: any) => {
+    const partners = snapshot.docs.map((doc: any) => doc.data() as Partner);
+    useStore.setState({ partners });
+  });
+
+  onSnapshot(collection(db, 'keys'), (snapshot: any) => {
+    const keys = snapshot.docs.map((doc: any) => doc.data() as LicenseKey);
+    useStore.setState({ keys });
+  });
+
+  onSnapshot(collection(db, 'packages'), (snapshot: any) => {
+    const packages = snapshot.docs.map((doc: any) => doc.data() as Package);
+    useStore.setState({ packages: packages.sort((a: any, b: any) => a.days - b.days) });
+  });
+
+  onSnapshot(collection(db, 'resetRequests'), (snapshot: any) => {
+    const resetRequests = snapshot.docs.map((doc: any) => doc.data() as ResetRequest);
+    useStore.setState({ resetRequests: resetRequests.sort((a: any, b: any) => b.createdAt - a.createdAt) });
   });
 }
