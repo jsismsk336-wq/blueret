@@ -10,18 +10,19 @@ import type { LicenseKey } from '../store/useStore';
 // ─── Result Modal (multi-key) ─────────────────────────────────────────────────
 function KeyResultModal({ keys, onClose }: { keys: LicenseKey[]; onClose: () => void }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const handleCopy = (id: string, keyStr: string) => {
     navigator.clipboard.writeText(keyStr);
     setCopiedId(id);
-    toast.success('คัดลอกคีย์เรียบร้อยแล้ว!');
+    toast.success(t('reseller.copySuccess'));
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleCopyAll = () => {
     const allKeys = keys.map(k => k.keyString).join('\n');
     navigator.clipboard.writeText(allKeys);
-    toast.success(`คัดลอกคีย์ทั้งหมด ${keys.length} รายการแล้ว!`);
+    toast.success(t('reseller.copyAllSuccess', { qty: keys.length }));
   };
 
   return (
@@ -51,8 +52,8 @@ function KeyResultModal({ keys, onClose }: { keys: LicenseKey[]; onClose: () => 
               <CheckCircle size={26} className="text-green-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">ดึงคีย์สำเร็จ!</h2>
-              <p className="text-gray-400 text-xs">ได้รับ <span className="text-green-400 font-bold">{keys.length} คีย์</span> · {keys[0]?.durationDays} วัน/เครื่อง</p>
+              <h2 className="text-lg font-bold text-white">{t('reseller.pullSuccess')}</h2>
+              <p className="text-gray-400 text-xs">{t('reseller.receivedKeys')} <span className="text-green-400 font-bold">{keys.length} {t('reseller.keys')}</span> · {keys[0]?.durationDays} {t('reseller.days')}/Device</p>
             </div>
           </div>
 
@@ -70,7 +71,7 @@ function KeyResultModal({ keys, onClose }: { keys: LicenseKey[]; onClose: () => 
                   }`}
                 >
                   {copiedId === k.id ? <CheckCircle size={13} /> : <Copy size={13} />}
-                  {copiedId === k.id ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                  {copiedId === k.id ? t('reseller.copied') : t('reseller.copy')}
                 </button>
               </div>
             ))}
@@ -83,7 +84,7 @@ function KeyResultModal({ keys, onClose }: { keys: LicenseKey[]; onClose: () => 
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all text-sm bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(66,133,244,0.3)] shrink-0"
             >
               <Copy size={16} />
-              คัดลอกคีย์ทั้งหมด {keys.length} รายการ
+              {t('reseller.copyAll', { qty: keys.length })}
             </button>
           )}
         </motion.div>
@@ -154,13 +155,13 @@ export function ResellerDashboard() {
 
   const handleRedeem = (days: number) => {
     if (isGlobalLocked) {
-      toast.error('กรุณารอให้การดำเนินการสำเร็จก่อน');
+      toast.error(t('reseller.waitPrevious'));
       return;
     }
 
     const token = getCsrfToken();
     if (!token) {
-      toast.error('Session ไม่ถูกต้อง กรุณา Login ใหม่');
+      toast.error(t('reseller.invalidSession'));
       return;
     }
 
@@ -170,16 +171,16 @@ export function ResellerDashboard() {
     setRedeemingDays(null);
 
     if (result === 'no_credit') {
-      toast.error('เครดิตไม่เพียงพอ กรุณาติดต่อแอดมินเพื่อเติมเครดิต');
+      toast.error(t('reseller.notEnoughCredit'));
     } else if (result === 'no_stock') {
-      toast.error('คีย์ในสต็อกหมดแล้ว กรุณาแจ้งแอดมินให้เติมสต็อก');
+      toast.error(t('reseller.stockEmpty'));
     } else if (result === 'csrf_error') {
-      toast.error('ข้อผิดพลาดด้านความปลอดภัย กรุณา Login ใหม่');
+      toast.error(t('reseller.securityError'));
     } else if (result === 'locked') {
-      toast.error('กำลังประมวลผล กรุณารอสักครู่...');
+      toast.error(t('reseller.processing'));
     } else if (Array.isArray(result)) {
       if (result.length < qty) {
-        toast(`ได้รับ ${result.length}/${qty} คีย์ (สต็อกหรือเครดิตไม่พอครบจำนวน)`, { icon: '⚠️' });
+        toast(t('reseller.partialKeys', { received: result.length, requested: qty }), { icon: '⚠️' });
       }
       setCooldownUntil(Date.now() + 2000);
       setResultKeys(result);

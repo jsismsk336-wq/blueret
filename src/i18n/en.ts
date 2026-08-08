@@ -11,7 +11,12 @@ export const en = {
   layout: {
     language: 'Language',
     logout: 'Logout',
-    contactAdmin: 'Contact Admin'
+    contactAdmin: 'Contact Admin',
+    contactDesc1: 'Select a channel below for inquiries, reporting issues, or requesting help.',
+    contactDesc2: 'Please make sure to select the correct contact channel.',
+    discordDesc: 'Report key issues here',
+    devContact: 'Contact Developer',
+    devDesc: 'Report duplicate keys or system bugs'
   },
   reseller: {
     dashboardTitle: 'Reseller Portal',
@@ -34,6 +39,37 @@ export const en = {
     keyFor: 'Key valid for {days} days / 1 device',
     quantity: 'Quantity (1-50)',
     total: 'Total {cost} credits',
-    pulling: 'Generating...'
+    pulling: 'Generating...',
+    copySuccess: 'Key copied successfully!',
+    copyAllSuccess: 'All {qty} keys copied successfully!',
+    pullSuccess: 'Keys generated successfully!',
+    receivedKeys: 'Received',
+    keys: 'Keys',
+    copied: 'Copied',
+    copy: 'Copy',
+    copyAll: 'Copy all {qty} keys',
+    waitPrevious: 'Please wait for the previous operation to finish',
+    invalidSession: 'Invalid session, please login again',
+    notEnoughCredit: 'Not enough credit, please contact admin',
+    stockEmpty: 'Stock is empty, please contact admin to restock',
+    securityError: 'Security error, please login again',
+    processing: 'Processing, please wait...',
+    partialKeys: 'Received {received}/{requested} keys (Insufficient stock or credit)',
+    resetSent: 'Reset request sent to admin!',
+    resetConfirm: 'Confirm Key Reset',
+    pinDesc: 'Please enter PIN (123456) to confirm reset for {key}',
+    historyDescKeys: 'All keys you have generated ({count} keys)',
+    search: 'Search Key or HWID...',
+    noHistory: 'No key history yet',
+    noHistoryDesc: 'Go to dashboard to get your first key',
+    noSearchResult: 'No matching keys found',
+    used: 'Used',
+    unused: 'Unused',
+    resetPending: 'Pending Reset (1-2 hrs)',
+    resetRejected: 'Rejected (Contact Admin)',
+    resetApproved: 'Reset Successful',
+    waitingReset: 'Pending...',
+    rejected: 'Rejected',
+    requestReset: 'Reset Key'
   }
 };

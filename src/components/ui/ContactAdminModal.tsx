@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { X, MessageSquare, Headset } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 
 interface ContactAdminModalProps {
@@ -8,6 +9,7 @@ interface ContactAdminModalProps {
 }
 
 export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -29,10 +31,10 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
           <Headset className="text-blue-500" size={24} />
         </div>
         
-        <h2 className="text-xl font-bold text-white mb-2">ติดต่อผู้ดูแลระบบ</h2>
+        <h2 className="text-xl font-bold text-white mb-2">{t('layout.contactAdmin')}</h2>
         <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-          เลือกช่องทางด้านล่างเพื่อสอบถามข้อมูล แจ้งปัญหา หรือขอความช่วยเหลือจากแอดมิน<br/>
-          <span className="text-yellow-500/90 font-medium mt-1 inline-block">กรุณาอ่านที่ติดต่อที่จะเเจ้งให้ถูกด้วยนะคับบผม</span>
+          {t('layout.contactDesc1')}<br/>
+          <span className="text-yellow-500/90 font-medium mt-1 inline-block">{t('layout.contactDesc2')}</span>
         </p>
 
         <div className="space-y-3">
@@ -49,7 +51,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
             </div>
             <div>
               <div className="text-white font-bold mb-0.5 group-hover:text-[#5865F2] transition-colors">Discord Server</div>
-              <div className="text-xs text-gray-400">ติดต่อเเจ้งปัญหาคีย์มีปัญหา</div>
+              <div className="text-xs text-gray-400">{t('layout.discordDesc')}</div>
             </div>
           </a>
 
@@ -66,8 +68,8 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
               <MessageSquare size={20} />
             </div>
             <div>
-              <div className="text-white font-bold mb-0.5 group-hover:text-purple-400 transition-colors">ติดต่อคนทำระบบ</div>
-              <div className="text-xs text-gray-400">เพื่อเเจ้งปัญหาคีย์ซ้ำหรือบัคๆต่างๆ</div>
+              <div className="text-white font-bold mb-0.5 group-hover:text-purple-400 transition-colors">{t('layout.devContact')}</div>
+              <div className="text-xs text-gray-400">{t('layout.devDesc')}</div>
             </div>
           </a>
         </div>

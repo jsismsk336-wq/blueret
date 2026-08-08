@@ -101,15 +101,15 @@ export function SpaceBackground() {
       reset(width: number, height: number) {
         this.x = Math.random() * width;
         this.y = -Math.random() * height;
-        this.length = Math.random() * 80 + 30; // ความยาวดาวตกนุ่มๆ
-        this.speed = Math.random() * 2 + 1.5; // วิ่งช้าๆ นุ่มๆ
-        this.opacity = Math.random() * 0.4 + 0.1; // แสงอ่อนๆ
+        this.length = Math.random() * 100 + 50; // ความยาวดาวตกยาวขึ้นหน่อย
+        this.speed = Math.random() * 3 + 2; // วิ่งเร็วขึ้นอีกนิด
+        this.opacity = Math.random() * 0.6 + 0.4; // สว่างขึ้น
         this.active = false;
       }
 
       update(width: number, height: number) {
         if (!this.active) {
-          if (Math.random() < 0.003) { // โอกาสเกิดน้อยๆ จะได้ดูนุ่มนวล ไม่เยอะไป
+          if (Math.random() < 0.01) { // โอกาสเกิดเพิ่มขึ้น จะได้เห็นง่ายขึ้น
             this.reset(width, height);
             this.active = true;
           }
@@ -128,16 +128,28 @@ export function SpaceBackground() {
       draw(ctx: CanvasRenderingContext2D) {
         if (!this.active) return;
         
+        // วาดหัวดาวตกให้สว่างขึ้น
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+        ctx.fill();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+
+        // วาดหางดาวตก
         ctx.beginPath();
         const gradient = ctx.createLinearGradient(this.x, this.y, this.x + this.length, this.y - this.length);
-        gradient.addColorStop(0, `rgba(192, 132, 252, ${this.opacity})`);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${this.opacity})`);
+        gradient.addColorStop(0.1, `rgba(192, 132, 252, ${this.opacity * 0.8})`);
         gradient.addColorStop(1, 'rgba(192, 132, 252, 0)');
         
         ctx.strokeStyle = gradient;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(this.x + this.length, this.y - this.length);
         ctx.stroke();
+        
+        ctx.shadowBlur = 0; // reset
       }
     }
 

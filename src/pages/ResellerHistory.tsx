@@ -4,9 +4,11 @@ import { KeyRound, Copy, Check, Clock, Activity, Search, RefreshCw, XCircle } fr
 import toast from 'react-hot-toast';
 import { PinModal } from '../components/ui/PinModal';
 import { useStore } from '../store/useStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 export function ResellerHistory() {
   const { currentReseller, keys, resetRequests = [], requestReset } = useStore();
+  const { t } = useTranslation();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [resetKeyTarget, setResetKeyTarget] = useState<{id: string, keyString: string} | null>(null);
@@ -38,13 +40,13 @@ export function ResellerHistory() {
   const handleCopy = (id: string, keyStr: string) => {
     navigator.clipboard.writeText(keyStr);
     setCopiedId(id);
-    toast.success('คัดลอกคีย์เรียบร้อยแล้ว!');
+    toast.success(t('reseller.copySuccess'));
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleResetRequest = (keyId: string, keyString: string) => {
     requestReset(keyId, keyString);
-    toast.success('ส่งคำขอรีเซ็ตคีย์ไปยังแอดมินแล้ว!');
+    toast.success(t('reseller.resetSent'));
   };
 
   return (
@@ -54,8 +56,8 @@ export function ResellerHistory() {
           <PinModal
             isOpen={!!resetKeyTarget}
             onClose={() => setResetKeyTarget(null)}
-            title="ยืนยันการขอรีเซ็ตคีย์"
-            subtitle={`กรุณากรอกรหัส PIN (123456) เพื่อยืนยันคำขอรีเซ็ตคีย์ ${resetKeyTarget.keyString}`}
+            title={t('reseller.resetConfirm')}
+            subtitle={t('reseller.pinDesc', { key: resetKeyTarget.keyString })}
             correctPin="123456"
             onSuccess={() => {
               handleResetRequest(resetKeyTarget.id, resetKeyTarget.keyString);
@@ -75,15 +77,15 @@ export function ResellerHistory() {
             <KeyRound size={12} className="text-purple-400" />
             <span className="text-xs font-bold text-purple-400">KEY HISTORY</span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">ประวัติคีย์ของฉัน</h1>
-          <p className="text-gray-400 text-sm">คีย์ทั้งหมดที่คุณเคยดึงออกจากสต็อก ({myKeys.length} คีย์)</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('reseller.history')}</h1>
+          <p className="text-gray-400 text-sm">{t('reseller.historyDescKeys', { count: myKeys.length })}</p>
         </div>
         
         <div className="relative w-full md:w-72">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
           <input 
             type="text" 
-            placeholder="ค้นหาคีย์ หรือ HWID..." 
+            placeholder={t('reseller.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-[#161925] border border-gray-800/60 rounded-xl pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors text-sm"
@@ -100,8 +102,8 @@ export function ResellerHistory() {
           <div className="w-16 h-16 bg-gray-800/50 rounded-2xl flex items-center justify-center mb-4">
             <KeyRound size={28} className="text-gray-600" />
           </div>
-          <p className="text-gray-400 font-medium">ยังไม่มีประวัติการดึงคีย์</p>
-          <p className="text-gray-600 text-sm mt-1">ไปที่แผงควบคุมเพื่อดึงคีย์แรกของคุณ</p>
+          <p className="text-gray-400 font-medium">{t('reseller.noHistory')}</p>
+          <p className="text-gray-600 text-sm mt-1">{t('reseller.noHistoryDesc')}</p>
         </motion.div>
       ) : filteredKeys.length === 0 ? (
         <motion.div
@@ -110,7 +112,7 @@ export function ResellerHistory() {
           className="flex flex-col items-center justify-center py-24 text-center relative z-10"
         >
           <Search size={32} className="text-gray-600 mb-4" />
-          <p className="text-gray-400 font-medium">ไม่พบคีย์ที่ค้นหา</p>
+          <p className="text-gray-400 font-medium">{t('reseller.noSearchResult')}</p>
         </motion.div>
       ) : (
         <div className="relative z-10 space-y-3">
@@ -123,18 +125,18 @@ export function ResellerHistory() {
             const isRejected = latestRequest?.status === 'rejected';
             const isApproved = latestRequest?.status === 'approved';
 
-            let statusLabel = key.hwid ? 'ถูกใช้งาน' : 'ยังไม่ได้ใช้';
+            let statusLabel = key.hwid ? t('reseller.used') : t('reseller.unused');
             let statusColor = key.hwid ? 'bg-orange-500/10 text-orange-400' : 'bg-green-500/10 text-green-400';
 
             if (latestRequest) {
               if (isPending) {
-                statusLabel = 'รอการรีเซ็ต (1-2 ชม.)';
+                statusLabel = t('reseller.resetPending');
                 statusColor = 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 animate-pulse';
               } else if (isRejected) {
-                statusLabel = 'ถูกปฏิเสธ (ติดต่อแอดมิน)';
+                statusLabel = t('reseller.resetRejected');
                 statusColor = 'bg-red-500/10 text-red-400 border border-red-500/20';
               } else if (isApproved && !key.hwid) {
-                statusLabel = 'รีเซ็ตสำเร็จแล้ว';
+                statusLabel = t('reseller.resetApproved');
                 statusColor = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
               }
             }
@@ -165,7 +167,7 @@ export function ResellerHistory() {
                         <span className="font-num">{key.redeemedAt ? new Date(key.redeemedAt).toLocaleString('th-TH') : '-'}</span>
                       </span>
                       <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
-                        <span className="font-num">{key.durationDays}</span> วัน
+                        <span className="font-num">{key.durationDays}</span> {t('reseller.day')}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
                         {statusLabel}
@@ -187,11 +189,11 @@ export function ResellerHistory() {
                     }`}
                   >
                     {isPending ? (
-                      <><RefreshCw size={15} className="animate-spin" /> รออนุมัติรีเซ็ต...</>
+                      <><RefreshCw size={15} className="animate-spin" /> {t('reseller.waitingReset')}</>
                     ) : isRejected ? (
-                      <><XCircle size={15} /> ถูกปฏิเสธ</>
+                      <><XCircle size={15} /> {t('reseller.rejected')}</>
                     ) : (
-                      <><RefreshCw size={15} /> ขอรีเซ็ต</>
+                      <><RefreshCw size={15} /> {t('reseller.requestReset')}</>
                     )}
                   </button>
                   <button
@@ -203,7 +205,7 @@ export function ResellerHistory() {
                     }`}
                   >
                     {copiedId === key.id ? <Check size={15} /> : <Copy size={15} />}
-                    {copiedId === key.id ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                    {copiedId === key.id ? t('reseller.copied') : t('reseller.copy')}
                   </button>
                 </div>
               </motion.div>
