@@ -11,6 +11,7 @@ export function SpaceBackground() {
     if (!ctx) return;
 
     let particles: Particle[] = [];
+    let shootingStars: ShootingStar[] = [];
     const particleCount = window.innerWidth < 768 ? 80 : 180; // ปรับจำนวนลงนิดนึงเพราะจุดใหญ่ขึ้น
     const connectionDistance = 150; // เพิ่มระยะเชื่อมต่อให้กว้างขึ้นนิดนึง
     const mouseConnectionDistance = 180; 
@@ -85,6 +86,61 @@ export function SpaceBackground() {
       }
     }
 
+    class ShootingStar {
+      x: number = 0;
+      y: number = 0;
+      length: number = 0;
+      speed: number = 0;
+      opacity: number = 0;
+      active: boolean = false;
+
+      constructor(width: number, height: number) {
+        this.reset(width, height);
+      }
+
+      reset(width: number, height: number) {
+        this.x = Math.random() * width;
+        this.y = -Math.random() * height;
+        this.length = Math.random() * 80 + 30; // ความยาวดาวตกนุ่มๆ
+        this.speed = Math.random() * 2 + 1.5; // วิ่งช้าๆ นุ่มๆ
+        this.opacity = Math.random() * 0.4 + 0.1; // แสงอ่อนๆ
+        this.active = false;
+      }
+
+      update(width: number, height: number) {
+        if (!this.active) {
+          if (Math.random() < 0.003) { // โอกาสเกิดน้อยๆ จะได้ดูนุ่มนวล ไม่เยอะไป
+            this.reset(width, height);
+            this.active = true;
+          }
+          return;
+        }
+
+        // เฉียงลงซ้าย
+        this.x -= this.speed;
+        this.y += this.speed;
+
+        if (this.x < -100 || this.y > height + 100) {
+          this.active = false;
+        }
+      }
+
+      draw(ctx: CanvasRenderingContext2D) {
+        if (!this.active) return;
+        
+        ctx.beginPath();
+        const gradient = ctx.createLinearGradient(this.x, this.y, this.x + this.length, this.y - this.length);
+        gradient.addColorStop(0, `rgba(192, 132, 252, ${this.opacity})`);
+        gradient.addColorStop(1, 'rgba(192, 132, 252, 0)');
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 1.5;
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.length, this.y - this.length);
+        ctx.stroke();
+      }
+    }
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -93,8 +149,12 @@ export function SpaceBackground() {
     const init = () => {
       resize();
       particles = [];
+      shootingStars = [];
       for (let i = 0; i < particleCount; i++) {
         particles.push(new Particle(canvas.width, canvas.height));
+      }
+      for (let i = 0; i < 6; i++) { // มีดาวตก 6 ดวงที่สลับกันวิ่ง
+        shootingStars.push(new ShootingStar(canvas.width, canvas.height));
       }
     };
 
@@ -139,6 +199,13 @@ export function SpaceBackground() {
         
         particles[i].draw(ctx);
       }
+      
+      ctx.shadowBlur = 0; // reset shadow for shooting stars
+      for (let i = 0; i < shootingStars.length; i++) {
+        shootingStars[i].update(canvas.width, canvas.height);
+        shootingStars[i].draw(ctx);
+      }
+      
       animId = requestAnimationFrame(animate);
     };
 

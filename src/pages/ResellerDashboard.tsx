@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
+import { useTranslation } from '../hooks/useTranslation';
 import { Coins, KeyRound, ShoppingCart, Copy, CheckCircle, X, Package, Minus, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCsrfToken, initSecurityHardening } from '../utils/security';
@@ -130,6 +131,7 @@ function QuantityPicker({ value, onChange }: { value: number; onChange: (v: numb
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export function ResellerDashboard() {
   const { currentReseller, packages, keys, redeemKey } = useStore();
+  const { t } = useTranslation();
   const [resultKeys, setResultKeys] = useState<LicenseKey[] | null>(null);
   const [redeemingDays, setRedeemingDays] = useState<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number>(0);
@@ -216,11 +218,11 @@ export function ResellerDashboard() {
             <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.15)]">
               <Coins size={22} className="text-blue-400" />
             </div>
-            <span className="text-blue-100/70 font-medium tracking-wide">เครดิตคงเหลือของคุณ</span>
+            <span className="text-blue-100/70 font-medium tracking-wide">{t('reseller.creditBalance')}</span>
           </div>
           <div className="text-5xl font-bold text-white tracking-tight flex items-baseline gap-2">
             {partner.balance.toLocaleString()}
-            <span className="text-lg font-medium text-blue-200/50">เครดิต</span>
+            <span className="text-lg font-medium text-blue-200/50">{t('reseller.credit')}</span>
           </div>
         </div>
       </motion.div>
@@ -228,7 +230,7 @@ export function ResellerDashboard() {
       {/* Packages */}
       <div className="mb-4 flex items-center gap-2 z-10 relative">
         <Package size={18} className="text-gray-400" />
-        <h2 className="text-white font-bold">เลือกแพ็กเกจที่ต้องการดึงคีย์</h2>
+        <h2 className="text-white font-bold">{t('reseller.selectPackage')}</h2>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
@@ -283,13 +285,13 @@ export function ResellerDashboard() {
                     {pkg.label}
                   </div>
                   <div className={`text-xs mt-1.5 font-bold ${accentClass} inline-block px-2.5 py-1 rounded-md shadow-inner`}>
-                    {unitCost} เครดิต / คีย์
+                    {unitCost} {t('reseller.keyPerCredit')}
                   </div>
                 </div>
                 <div className={`text-xs px-2.5 py-1.5 rounded-xl font-bold shadow-sm ${
                   stock > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
                 }`}>
-                  {stock > 0 ? `สต็อก ${stock}` : 'หมด'}
+                  {stock > 0 ? `${t('reseller.stock')} ${stock}` : t('reseller.outOfStock')}
                 </div>
               </div>
 
@@ -298,11 +300,11 @@ export function ResellerDashboard() {
                   <div className="p-1.5 bg-gray-800/50 rounded-lg">
                     <KeyRound size={14} className="text-gray-400" />
                   </div>
-                  <span className="text-xs text-gray-300 font-medium">คีย์ใช้งาน {pkg.days} วัน / 1 เครื่อง</span>
+                  <span className="text-xs text-gray-300 font-medium">{t('reseller.keyFor', { days: pkg.days })}</span>
                 </div>
                 {/* Quantity picker */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">จำนวน (1–50)</span>
+                  <span className="text-xs text-gray-500">{t('reseller.quantity')}</span>
                   <QuantityPicker
                     value={qty}
                     onChange={(v) => setQty(pkg.days, v)}
@@ -313,7 +315,7 @@ export function ResellerDashboard() {
                   <span className={`text-[11px] font-bold px-2 py-1 rounded-md ${
                     canAffordQty ? accentClass : 'bg-red-500/10 text-red-400 border border-red-500/10'
                   }`}>
-                    รวม {totalCost.toLocaleString()} เครดิต
+                    {t('reseller.total', { cost: totalCost.toLocaleString() })}
                   </span>
                 </div>
               </div>
@@ -337,12 +339,12 @@ export function ResellerDashboard() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                     </svg>
-                    กำลังดึงคีย์...
+                    {t('reseller.pulling')}
                   </>
                 ) : (
                   <>
                     <ShoppingCart size={16} />
-                    {!canAfford ? 'เครดิตไม่พอ' : stock === 0 ? 'สต็อกหมด' : !canAffordQty ? `ดึง ${Math.min(qty, Math.floor(partner.balance / unitCost), stock)} คีย์` : `ดึง ${qty} คีย์`}
+                    {!canAfford ? t('reseller.noCredit') : stock === 0 ? t('reseller.outOfStock') : !canAffordQty ? t('reseller.pullKeys', { qty: Math.min(qty, Math.floor(partner.balance / unitCost), stock) }) : t('reseller.pullKeys', { qty })}
                   </>
                 )}
               </button>

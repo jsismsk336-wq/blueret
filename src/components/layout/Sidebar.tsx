@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { ShieldAlert, Users, Key, Lock, X, RefreshCw } from 'lucide-react';
+import { ShieldAlert, Users, Key, Lock, X, RefreshCw, Globe } from 'lucide-react';
 import { NeonLogo } from '../ui/NeonLogo';
 import { useStore } from '../../store/useStore';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,13 +12,14 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const resetRequests = useStore(state => state.resetRequests || []);
   const pendingCount = resetRequests.filter(r => r.status === 'pending').length;
+  const { t, language, toggleLanguage } = useTranslation();
 
   const menuItems = [
-    { path: '/dashboard', label: 'ภาพรวมระบบ', icon: ShieldAlert },
-    { path: '/dashboard/partners', label: 'จัดการพาร์ทเนอร์', icon: Users },
-    { path: '/dashboard/keys', label: 'ประวัติคีย์ใช้งาน', icon: Key },
-    { path: '/dashboard/settings', label: 'ตั้งค่าความปลอดภัย', icon: Lock },
-    { path: '/dashboard/reset-requests', label: 'คำขอรีเซ็ตคีย์', icon: RefreshCw, badge: pendingCount > 0 ? pendingCount : null },
+    { path: '/dashboard', label: t('sidebar.overview'), icon: ShieldAlert },
+    { path: '/dashboard/partners', label: t('sidebar.partners'), icon: Users },
+    { path: '/dashboard/keys', label: t('sidebar.keys'), icon: Key },
+    { path: '/dashboard/settings', label: t('sidebar.settings'), icon: Lock },
+    { path: '/dashboard/reset-requests', label: t('sidebar.resetRequests'), icon: RefreshCw, badge: pendingCount > 0 ? pendingCount : null },
   ];
 
   return (
@@ -31,10 +33,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <NeonLogo className="w-full h-full scale-110" />
         </div>
         <div className="flex flex-col flex-1 min-w-0">
-          <h1 className="text-white font-bold tracking-wider">BLUERET แอดมิน</h1>
+          <h1 className="text-white font-bold tracking-wider">{t('sidebar.adminTitle')}</h1>
           <div className="flex items-center gap-1.5 mt-0.5">
             <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
-            <span className="text-green-500 text-[10px] font-bold">ผู้ดูแลระบบหลัก</span>
+            <span className="text-green-500 text-[10px] font-bold">{t('sidebar.adminRole')}</span>
           </div>
         </div>
         {/* Close button for mobile */}
@@ -74,6 +76,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </NavLink>
         ))}
       </nav>
+
+      {/* Language Switcher */}
+      <div className="p-4 border-t border-gray-800/40">
+        <button
+          onClick={toggleLanguage}
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#1C1F2E] text-gray-300 hover:text-white hover:bg-gray-800 border border-gray-800/60 transition-all font-bold tracking-wide"
+        >
+          <Globe size={18} className={language === 'th' ? 'text-blue-400' : 'text-purple-400'} />
+          <span>{language.toUpperCase()}</span>
+        </button>
+      </div>
     </aside>
   );
 }

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Key, LogOut, Menu, X, Headset } from 'lucide-react';
+import { LayoutDashboard, Key, LogOut, Menu, X, Headset, Globe } from 'lucide-react';
 import { NeonLogo } from '../ui/NeonLogo';
 import { useStore } from '../../store/useStore';
+import { useTranslation } from '../../hooks/useTranslation';
 import { ContactAdminModal } from '../ui/ContactAdminModal';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -12,6 +13,7 @@ export function ResellerLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const { t, language, toggleLanguage } = useTranslation();
 
   if (!currentReseller) {
     return <Navigate to="/" replace />;
@@ -26,8 +28,8 @@ export function ResellerLayout() {
   };
 
   const menuItems = [
-    { path: '/reseller/dashboard', label: 'แผงควบคุม', icon: LayoutDashboard },
-    { path: '/reseller/history', label: 'ประวัติคีย์ของฉัน', icon: Key },
+    { path: '/reseller/dashboard', label: t('reseller.dashboardTitle'), icon: LayoutDashboard },
+    { path: '/reseller/history', label: t('reseller.history'), icon: Key },
   ];
 
   return (
@@ -77,7 +79,7 @@ export function ResellerLayout() {
         {/* Balance badge */}
         {partner && (
           <div className="mx-4 mt-4 bg-[#1C1F2E] border border-gray-800/60 rounded-xl p-4">
-            <div className="text-xs text-gray-500 mb-1">เครดิตคงเหลือ</div>
+            <div className="text-xs text-gray-500 mb-1">{t('reseller.balance')}</div>
             <div className="text-xl font-bold text-primary">{partner.balance.toLocaleString()}</div>
           </div>
         )}
@@ -108,14 +110,21 @@ export function ResellerLayout() {
             className="w-full flex items-center gap-3 px-4 py-3 mb-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:text-white transition-all text-sm font-medium border border-blue-500/20 hover:border-blue-500/40"
           >
             <Headset size={18} />
-            ติดต่อแอดมิน
+            {t('layout.contactAdmin')}
+          </button>
+          <button
+            onClick={toggleLanguage}
+            className="w-full flex items-center gap-3 px-4 py-3 mb-2 rounded-xl bg-[#1C1F2E] text-gray-300 hover:text-white hover:bg-gray-800 transition-all text-sm font-medium border border-gray-800/60"
+          >
+            <Globe size={18} className={language === 'th' ? 'text-blue-400' : 'text-purple-400'} />
+            {language.toUpperCase()}
           </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium border border-transparent hover:border-red-500/20"
           >
             <LogOut size={18} />
-            ออกจากระบบ
+            {t('layout.logout')}
           </button>
         </div>
       </aside>
