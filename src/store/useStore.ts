@@ -69,6 +69,7 @@ interface AdminState {
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
   updatePartnerBalance: (id: string, amount: number) => void;
+  updatePartnerPassword: (id: string, newPassword: string) => void;
   togglePartnerStatus: (id: string) => void;
   deletePartner: (id: string) => void;
 
@@ -149,7 +150,9 @@ export const useStore = create<AdminState>()(
         }
         // Check partners
         const { partners } = get();
-        const partner = partners.find(p => p.username === username && p.password === password);
+        const safeUser = username.trim().toLowerCase();
+        const safePass = password.trim();
+        const partner = partners.find(p => p.username.trim().toLowerCase() === safeUser && p.password === safePass);
         if (partner) {
           if (partner.status === 'suspended') return 'error';
           set({ currentUser: partner });
@@ -183,6 +186,15 @@ export const useStore = create<AdminState>()(
         set({
           partners: partners.map(p =>
             p.id === id ? { ...p, balance: amount } : p
+          )
+        });
+      },
+
+      updatePartnerPassword: (id, newPassword) => {
+        const { partners } = get();
+        set({
+          partners: partners.map(p =>
+            p.id === id ? { ...p, password: newPassword } : p
           )
         });
       },

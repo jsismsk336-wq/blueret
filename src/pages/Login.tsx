@@ -145,7 +145,7 @@ export function Login() {
         </form>
 
         <p className="mt-8 text-[11px] text-gray-600 tracking-wide">
-          © 2026 <span className="text-gray-400">Blueret Corp</span> · Security Layer
+          © 2026 <span className="text-gray-400">Blueret Corp</span> · dev.lucky
         </p>
       </GlassCard>
     </div>

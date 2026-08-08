@@ -7,7 +7,7 @@ import { ManageCreditModal } from '../components/ui/ManageCreditModal';
 import toast from 'react-hot-toast';
 
 export function Partners() {
-  const { partners, togglePartnerStatus, deletePartner } = useStore();
+  const { partners, togglePartnerStatus, deletePartner, updatePartnerPassword } = useStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [managingCreditFor, setManagingCreditFor] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -20,9 +20,12 @@ export function Partners() {
     }, 600);
   };
 
-  const handleResetPassword = (username: string) => {
-    const newPass = Math.random().toString(36).slice(-6).toUpperCase();
-    toast.success(`รีเซ็ตรหัสผ่านของ ${username} สำเร็จ!\nรหัสผ่านใหม่: ${newPass}`, { duration: 5000 });
+  const handleResetPassword = (id: string, username: string) => {
+    const newPass = window.prompt(`ตั้งรหัสผ่านใหม่สำหรับพาร์ทเนอร์: ${username}\n(เว้นว่างไว้เพื่อยกเลิก)`);
+    if (newPass && newPass.trim() !== '') {
+      updatePartnerPassword(id, newPass.trim());
+      toast.success(`รีเซ็ตรหัสผ่านของ ${username} สำเร็จ!\nรหัสผ่านใหม่: ${newPass.trim()}`, { duration: 5000 });
+    }
   };
 
   return (
@@ -101,7 +104,7 @@ export function Partners() {
                         จัดการเครดิต
                       </button>
                       <button 
-                        onClick={() => handleResetPassword(partner.username)}
+                        onClick={() => handleResetPassword(partner.id, partner.username)}
                         className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700 transition-all text-xs font-medium"
                       >
                         รีเซ็ตรหัส

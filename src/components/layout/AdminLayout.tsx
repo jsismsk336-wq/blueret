@@ -3,9 +3,16 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Menu } from 'lucide-react';
 import { NeonLogo } from '../ui/NeonLogo';
+import { useStore } from '../../store/useStore';
+import { Navigate } from 'react-router-dom';
 
 export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const currentUser = useStore(s => s.currentUser);
+
+  if (currentUser !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#0B0E14] text-white flex">

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Key, LogOut, Menu, X, Headset } from 'lucide-react';
 import { NeonLogo } from '../ui/NeonLogo';
 import { useStore } from '../../store/useStore';
@@ -13,7 +13,11 @@ export function ResellerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
-  const partner = currentUser !== 'admin' ? currentUser : null;
+  if (!currentUser || currentUser === 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  const partner = currentUser;
 
   const handleLogout = () => {
     logout();
