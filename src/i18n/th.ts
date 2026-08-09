@@ -73,7 +73,10 @@ export const th = {
     resetApproved: 'รีเซ็ตสำเร็จแล้ว',
     waitingReset: 'รออนุมัติรีเซ็ต...',
     rejected: 'ถูกปฏิเสธ',
-    requestReset: 'ขอรีเซ็ต'
+    requestReset: 'ขอรีเซ็ต',
+    announcements: 'ประวัติประกาศ',
+    acknowledgeAnn: 'รับทราบประกาศ',
+    acknowledgeDesc: 'คลิกเพื่อรับทราบและปิดหน้าต่างนี้'
   },
   admin: {
     overviewTitle: 'แผงควบคุมหลัก',

@@ -77,9 +77,12 @@ export const en = {
     resetPending: 'Pending Reset (1-2 hrs)',
     resetRejected: 'Rejected (Contact Admin)',
     resetApproved: 'Reset Successful',
-    waitingReset: 'Pending...',
+    waitingReset: 'Waiting for reset...',
     rejected: 'Rejected',
-    requestReset: 'Reset Key'
+    requestReset: 'Request Reset',
+    announcements: 'Announcements',
+    acknowledgeAnn: 'Acknowledge Announcement',
+    acknowledgeDesc: 'Click to acknowledge and close this window'
   },
   admin: {
     overviewTitle: 'Admin Dashboard',

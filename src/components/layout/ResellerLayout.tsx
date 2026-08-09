@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Key, LogOut, Menu, X, Headset, Globe } from 'lucide-react';
+import { LayoutDashboard, Key, LogOut, Menu, X, Headset, Globe, Megaphone } from 'lucide-react';
 import { NeonLogo } from '../ui/NeonLogo';
 import { useStore } from '../../store/useStore';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -30,6 +30,7 @@ export function ResellerLayout() {
   const menuItems = [
     { path: '/reseller/dashboard', label: t('reseller.dashboardTitle'), icon: LayoutDashboard },
     { path: '/reseller/history', label: t('reseller.history'), icon: Key },
+    { path: '/reseller/announcements', label: t('reseller.announcements'), icon: Megaphone },
   ];
 
   return (

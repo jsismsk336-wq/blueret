@@ -9,6 +9,7 @@ import { Keys } from './pages/Keys';
 import { Settings } from './pages/Settings';
 import { ResellerDashboard } from './pages/ResellerDashboard';
 import { ResellerHistory } from './pages/ResellerHistory';
+import { ResellerAnnouncements } from './pages/ResellerAnnouncements';
 import { ResetRequests } from './pages/ResetRequests';
 import { Announcements } from './pages/Announcements';
 import { initFirebaseSync } from './store/useStore';
@@ -51,6 +52,7 @@ function App() {
             <Route index element={<Navigate to="/reseller/dashboard" replace />} />
             <Route path="dashboard" element={<ResellerDashboard />} />
             <Route path="history" element={<ResellerHistory />} />
+            <Route path="announcements" element={<ResellerAnnouncements />} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />
