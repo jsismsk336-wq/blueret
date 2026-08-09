@@ -10,6 +10,7 @@ import { Settings } from './pages/Settings';
 import { ResellerDashboard } from './pages/ResellerDashboard';
 import { ResellerHistory } from './pages/ResellerHistory';
 import { ResetRequests } from './pages/ResetRequests';
+import { Announcements } from './pages/Announcements';
 import { initFirebaseSync } from './store/useStore';
 import { useEffect } from 'react';
 
@@ -42,6 +43,7 @@ function App() {
             <Route path="keys" element={<Keys />} />
             <Route path="settings" element={<Settings />} />
             <Route path="reset-requests" element={<ResetRequests />} />
+            <Route path="announcements" element={<Announcements />} />
           </Route>
           
           {/* Reseller routes */}
