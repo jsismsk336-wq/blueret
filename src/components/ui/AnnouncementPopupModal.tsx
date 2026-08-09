@@ -62,13 +62,13 @@ export function AnnouncementPopupModal() {
 
           {/* Image */}
           {activeAnnouncement.imageBase64 && (
-            <div className="w-full h-64 bg-gray-900 overflow-hidden relative">
+            <div className="w-full relative flex items-center justify-center bg-black/40">
               <img 
                 src={activeAnnouncement.imageBase64} 
                 alt={activeAnnouncement.title} 
-                className="w-full h-full object-cover"
+                className="w-full h-auto max-h-[300px] sm:max-h-[400px] object-contain"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0F111A] to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#0F111A] to-transparent pointer-events-none" />
             </div>
           )}
 

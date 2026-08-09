@@ -186,7 +186,7 @@ export const th = {
     annTitleLabel: 'หัวข้อประกาศ',
     annTitlePlaceholder: 'เช่น ตีป้อม, นัดประชุม',
     annTypeLabel: 'ประเภทประกาศ',
-    annTypeClan: 'ประกาศแคลน',
+    annTypeClan: 'ประกาศเซิฟเวอร์',
     annTypeMeeting: 'การประชุม',
     annTypeWar: 'สงคราม',
     annDescLabel: 'รายละเอียด (ยาวได้)',

@@ -193,7 +193,7 @@ export const en = {
     annTitleLabel: 'Announcement Title',
     annTitlePlaceholder: 'e.g. Clan War, Meeting',
     annTypeLabel: 'Announcement Type',
-    annTypeClan: 'Clan Announcement',
+    annTypeClan: 'Server Announcement',
     annTypeMeeting: 'Meeting',
     annTypeWar: 'War',
     annDescLabel: 'Description (Long text)',
