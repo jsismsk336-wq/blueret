@@ -189,7 +189,7 @@ export const useStore = create<AdminState>()(
       // ─── SYSTEM SETTINGS ───────────────────────────────────────────────────
       updateGlobalLogo: (base64) => {
         set({ globalLogoUrl: base64 });
-        setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true });
+        setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true }).catch(console.error);
       },
 
       // ─── PARTNER CRUD ────────────────────────────────────────────────────────
@@ -555,10 +555,11 @@ export const useStore = create<AdminState>()(
     }),
     {
       name: 'blueret-storage',
-      // Only persist local auth state
+      // Only persist local auth state and logo cache
       partialize: (state) => ({
         currentAdmin: state.currentAdmin,
         currentReseller: state.currentReseller,
+        globalLogoUrl: state.globalLogoUrl,
       }),
     }
   )

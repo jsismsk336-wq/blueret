@@ -6,7 +6,7 @@ export function NeonLogo({ className = '' }: { className?: string }) {
   const chars = text.split('');
 
   return (
-    <div className={`relative flex items-center justify-center perspective-[500px] w-24 h-24 ${className}`}>
+    <div className={`relative flex items-center justify-center perspective-[600px] w-36 h-36 ${className}`}>
       {/* 3D Spinning Text */}
       <div className="absolute inset-0 flex items-center justify-center animate-spin-3d preserve-3d z-0">
         {chars.map((char, i) => {
@@ -14,9 +14,9 @@ export function NeonLogo({ className = '' }: { className?: string }) {
           return (
             <span
               key={i}
-              className="absolute text-blue-400 text-[10px] font-bold uppercase drop-shadow-[0_0_5px_rgba(66,133,244,0.8)]"
+              className="absolute text-blue-400 text-[11px] font-bold uppercase drop-shadow-[0_0_5px_rgba(66,133,244,0.8)]"
               style={{
-                transform: `rotateY(${rotation}deg) translateZ(40px)`,
+                transform: `rotateY(${rotation}deg) translateZ(60px)`,
               }}
             >
               {char}
@@ -29,7 +29,7 @@ export function NeonLogo({ className = '' }: { className?: string }) {
       <img 
         src={globalLogoUrl || "/logo.png"} 
         alt="BLUERET Logo" 
-        className="h-12 w-auto max-w-[48px] object-contain relative z-10 drop-shadow-[0_0_10px_rgba(66,133,244,0.3)] bg-[#0B0E14] rounded-full p-1" 
+        className="h-20 w-auto max-w-[80px] object-contain relative z-10 drop-shadow-[0_0_15px_rgba(66,133,244,0.4)]" 
       />
     </div>
   );
