@@ -1,4 +1,7 @@
+import { useStore } from '../../store/useStore';
+
 export function NeonLogo({ className = '' }: { className?: string }) {
+  const { globalLogoUrl } = useStore();
   const text = " BLUERET • BLUERET • BLUERET • ";
   const chars = text.split('');
 
@@ -24,9 +27,9 @@ export function NeonLogo({ className = '' }: { className?: string }) {
       
       {/* Center Logo */}
       <img 
-        src="/logo.png" 
+        src={globalLogoUrl || "/logo.png"} 
         alt="BLUERET Logo" 
-        className="h-12 w-auto object-contain relative z-10 drop-shadow-[0_0_10px_rgba(66,133,244,0.3)] bg-[#0B0E14] rounded-full p-1" 
+        className="h-12 w-auto max-w-[48px] object-contain relative z-10 drop-shadow-[0_0_10px_rgba(66,133,244,0.3)] bg-[#0B0E14] rounded-full p-1" 
       />
     </div>
   );

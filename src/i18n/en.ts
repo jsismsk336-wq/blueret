@@ -181,9 +181,19 @@ export const en = {
     newPasswordPlaceholder: 'Enter new password',
     confirmPassword: 'Confirm New Password',
     confirmPasswordPlaceholder: 'Confirm new password again',
-    confirmChangeBtn: 'Confirm Password Change',
-    passwordMismatch: 'New passwords do not match!',
-    passwordChangedSuccess: 'Password changed successfully!',
+    confirmChangeBtn: 'Confirm Changes',
+    passwordMismatch: 'New passwords do not match',
+    passwordChangedSuccess: 'Password changed successfully',
+    
+    // System Logo Settings
+    logoSettingsTitle: 'System Logo Settings',
+    logoSettingsDesc: 'Upload a new image to change the login and main logo',
+    uploadLogoBtn: 'Select New Logo',
+    removeLogoBtn: 'Remove & Use Default',
+    saveLogoBtn: 'Save Logo',
+    logoSavedSuccess: 'Logo saved successfully!',
+    logoRemovedSuccess: 'Reverted to default logo',
+    
     announcementsTitle: 'Announcement Management',
     announcementsDesc: 'Create and manage announcements displayed on the reseller portal',
     createNewAnnouncement: 'Create Announcement',

@@ -174,9 +174,19 @@ export const th = {
     newPasswordPlaceholder: 'กรอกรหัสผ่านใหม่',
     confirmPassword: 'ยืนยันรหัสผ่านใหม่',
     confirmPasswordPlaceholder: 'ยืนยันรหัสผ่านใหม่อีกครั้ง',
-    confirmChangeBtn: 'ยืนยันการเปลี่ยนรหัสผ่าน',
-    passwordMismatch: 'รหัสผ่านใหม่ไม่ตรงกัน!',
-    passwordChangedSuccess: 'เปลี่ยนรหัสผ่านสำเร็จ!',
+    confirmChangeBtn: 'ยืนยันการเปลี่ยนแปลง',
+    passwordMismatch: 'รหัสผ่านใหม่ไม่ตรงกัน',
+    passwordChangedSuccess: 'เปลี่ยนรหัสผ่านสำเร็จ',
+    
+    // System Logo Settings
+    logoSettingsTitle: 'ตั้งค่ารูปโลโก้ระบบ',
+    logoSettingsDesc: 'อัปโหลดรูปภาพใหม่เพื่อเปลี่ยนโลโก้หน้าเข้าสู่ระบบและโลโก้หลัก',
+    uploadLogoBtn: 'เลือกรูปโลโก้ใหม่',
+    removeLogoBtn: 'ลบรูปและใช้ค่าเริ่มต้น',
+    saveLogoBtn: 'บันทึกโลโก้',
+    logoSavedSuccess: 'บันทึกโลโก้สำเร็จ!',
+    logoRemovedSuccess: 'กลับไปใช้โลโก้เริ่มต้นแล้ว',
+
     announcementsTitle: 'ระบบจัดการประกาศ',
     announcementsDesc: 'สร้างและจัดการประกาศแจ้งเตือนที่จะไปแสดงบนหน้าเว็บตัวแทนจำหน่าย',
     createNewAnnouncement: 'สร้างประกาศใหม่',

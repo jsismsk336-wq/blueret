@@ -56,6 +56,7 @@ export interface Announcement {
 
 interface AdminState {
   adminBalance: number;
+  globalLogoUrl: string | null;
   partners: Partner[];
   keys: LicenseKey[];
   packages: Package[];
@@ -68,6 +69,9 @@ interface AdminState {
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
   logoutAdmin: () => void;
   logoutReseller: () => void;
+
+  // System Settings
+  updateGlobalLogo: (base64: string | null) => void;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -143,6 +147,7 @@ export const useStore = create<AdminState>()(
   persist(
     (set, get) => ({
       adminBalance: 90000000000000000,
+      globalLogoUrl: null,
       partners: [],
       keys: [],
       packages: [],
@@ -179,6 +184,12 @@ export const useStore = create<AdminState>()(
       logoutReseller: () => {
         set({ currentReseller: null });
         generateCsrfToken();
+      },
+
+      // ─── SYSTEM SETTINGS ───────────────────────────────────────────────────
+      updateGlobalLogo: (base64) => {
+        set({ globalLogoUrl: base64 });
+        setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true });
       },
 
       // ─── PARTNER CRUD ────────────────────────────────────────────────────────
@@ -578,7 +589,11 @@ export async function initFirebaseSync() {
 
   onSnapshot(globalConfigRef, (docSnap: any) => {
     if (docSnap.exists()) {
-      useStore.setState({ adminBalance: docSnap.data().adminBalance });
+      const data = docSnap.data();
+      useStore.setState({ 
+        adminBalance: data.adminBalance,
+        globalLogoUrl: data.logoUrl || null
+      });
     }
   });
 
