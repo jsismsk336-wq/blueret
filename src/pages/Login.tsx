@@ -104,7 +104,7 @@ export function Login() {
       
       <GlassCard className="w-full max-w-[420px] p-8 md:p-10 flex flex-col items-center relative z-10 border-white/5 bg-[#0B0E14]/40">
         <div className="mb-4">
-          <NeonLogo />
+          <NeonLogo size="lg" />
         </div>
         
         <h1 className="text-2xl font-bold tracking-wider text-white mb-1">BLUERET</h1>
