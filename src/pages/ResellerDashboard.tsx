@@ -5,7 +5,6 @@ import { useTranslation } from '../hooks/useTranslation';
 import { Coins, KeyRound, ShoppingCart, Copy, CheckCircle, X, Package, Minus, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCsrfToken, initSecurityHardening } from '../utils/security';
-import { AnnouncementPopupModal } from '../components/ui/AnnouncementPopupModal';
 import type { LicenseKey } from '../store/useStore';
 
 // ─── Result Modal (multi-key) ─────────────────────────────────────────────────
@@ -137,6 +136,7 @@ export function ResellerDashboard() {
   const [resultKeys, setResultKeys] = useState<LicenseKey[] | null>(null);
   const [redeemingDays, setRedeemingDays] = useState<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number>(0);
+  // quantity per package
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
   useEffect(() => {
@@ -240,10 +240,11 @@ export function ResellerDashboard() {
           const qty = getQty(pkg.days);
           const unitCost = partner.customPrices?.[pkg.days] ?? pkg.cost;
           const totalCost = unitCost * qty;
-          const canAfford = partner.balance >= unitCost; 
+          const canAfford = partner.balance >= unitCost; // can afford at least 1
           const canAffordQty = partner.balance >= totalCost;
           const available = stock > 0 && canAfford;
 
+          // Generate dynamic accent colors based on package days
           const accentClass = 
             pkg.days === 1 ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/5 border-blue-500/30 text-blue-400' :
             pkg.days === 3 ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/5 border-green-500/30 text-green-400' :
@@ -356,8 +357,6 @@ export function ResellerDashboard() {
       {resultKeys && (
         <KeyResultModal keys={resultKeys} onClose={() => setResultKeys(null)} />
       )}
-
-      <AnnouncementPopupModal />
     </div>
   );
 }

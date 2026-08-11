@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { ShieldAlert, Users, Key, Lock, X, RefreshCw, Globe, Megaphone } from 'lucide-react';
+import { ShieldAlert, Users, Key, Lock, X, RefreshCw, Globe } from 'lucide-react';
 import { NeonLogo } from '../ui/NeonLogo';
 import { useStore } from '../../store/useStore';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -18,7 +18,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { path: '/dashboard', label: t('sidebar.overview'), icon: ShieldAlert },
     { path: '/dashboard/partners', label: t('sidebar.partners'), icon: Users },
     { path: '/dashboard/keys', label: t('sidebar.keys'), icon: Key },
-    { path: '/dashboard/announcements', label: t('sidebar.announcements'), icon: Megaphone },
     { path: '/dashboard/settings', label: t('sidebar.settings'), icon: Lock },
     { path: '/dashboard/reset-requests', label: t('sidebar.resetRequests'), icon: RefreshCw, badge: pendingCount > 0 ? pendingCount : null },
   ];

@@ -7,27 +7,6 @@
   --color-dark-bg: #0B0E14;
   --color-glass: rgba(15, 23, 42, 0.6);
   --color-glass-border: rgba(255, 255, 255, 0.08);
-
-  --animate-slow-zoom: slow-zoom 20s ease-in-out infinite alternate;
-  --animate-spin-3d: spin-3d 10s linear infinite;
-  
-  @keyframes slow-zoom {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.15); }
-  }
-  
-  @keyframes spin-3d {
-    from { transform: rotateZ(-15deg) rotateX(-20deg) rotateY(0deg); }
-    to { transform: rotateZ(-15deg) rotateX(-20deg) rotateY(360deg); }
-  }
-}
-
-@utility preserve-3d {
-  transform-style: preserve-3d;
-}
-
-@utility perspective-* {
-  perspective: --value(length);
 }
 
 @layer base {
