@@ -77,6 +77,24 @@ export function PackageSettingsModal({ isOpen, onClose }: PackageSettingsModalPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Auto-add if user filled the form but clicked Save instead of +
+    const rawValue = parseInt(newDays, 10);
+    const cost = parseInt(newCost, 10);
+    
+    if (!isNaN(rawValue) && rawValue > 0 && !isNaN(cost) && cost >= 0) {
+      const days = newUnit === 'hours' ? -rawValue : rawValue;
+      if (!localPackages.find(p => p.days === days)) {
+        const label = newUnit === 'hours'
+          ? `${rawValue} Hour${rawValue > 1 ? 's' : ''}`
+          : `${rawValue} Day${rawValue > 1 ? 's' : ''}`;
+
+        const newPkg: Package = { days, label, cost };
+        addPackage(newPkg);
+        localPackages.push(newPkg); // Add to local array so cost update loop includes it
+      }
+    }
+
     localPackages.forEach(pkg => {
       updatePackageCost(pkg.days, pkg.cost);
     });
