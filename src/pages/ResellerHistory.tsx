@@ -167,7 +167,7 @@ export function ResellerHistory() {
                         <span className="font-num">{key.redeemedAt ? new Date(key.redeemedAt).toLocaleString('th-TH') : '-'}</span>
                       </span>
                       <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
-                        <span className="font-num">{key.durationDays}</span> {t('reseller.day')}
+                        <span className="font-num">{Math.abs(key.durationDays)}</span> {key.durationDays < 0 ? 'Hour(s)' : t('reseller.day')}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
                         {statusLabel}

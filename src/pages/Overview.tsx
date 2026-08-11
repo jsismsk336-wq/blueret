@@ -167,7 +167,7 @@ export function Overview() {
                       -{pkg.cost} {t('reseller.credit')}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 mb-4 font-medium">{t('admin.keyUsage', { days: pkg.days })}</p>
+                  <p className="text-xs text-gray-400 mb-4 font-medium">สำหรับแพ็กเกจ {pkg.label}</p>
                   
                   <div className="bg-black/20 rounded-xl p-4 mb-5 border border-white/5 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>

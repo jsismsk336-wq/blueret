@@ -5,6 +5,7 @@ export const en = {
     keys: 'Key History',
     settings: 'Security Settings',
     resetRequests: 'Reset Requests',
+    announcements: 'Announcements',
     adminTitle: 'BLUERET Admin',
     adminRole: 'Main Administrator'
   },
@@ -18,7 +19,13 @@ export const en = {
     devContact: 'Contact Developer',
     devDesc: 'Report duplicate keys or system bugs',
     ownerContact: 'Contact Owner',
-    ownerDesc: '@Sky_blueret'
+    ownerDesc: '@Sky_blueret',
+    pullKeysBtn: 'Pull New Keys',
+    cancelBtn: 'Cancel',
+    active: 'Active',
+    hwidNotBound: 'Not Bound',
+    acknowledgeAnn: 'Acknowledge',
+    acknowledgeDesc: 'Click to acknowledge and close this window'
   },
   reseller: {
     dashboardTitle: 'Reseller Portal',
@@ -70,9 +77,12 @@ export const en = {
     resetPending: 'Pending Reset (1-2 hrs)',
     resetRejected: 'Rejected (Contact Admin)',
     resetApproved: 'Reset Successful',
-    waitingReset: 'Pending...',
+    waitingReset: 'Waiting for reset...',
     rejected: 'Rejected',
-    requestReset: 'Reset Key'
+    requestReset: 'Request Reset',
+    announcements: 'Announcements',
+    acknowledgeAnn: 'Acknowledge Announcement',
+    acknowledgeDesc: 'Click to acknowledge and close this window'
   },
   admin: {
     overviewTitle: 'Admin Dashboard',
@@ -138,6 +148,7 @@ export const en = {
     pulledBy: 'Pulled by:',
     unknown: 'Unknown',
     resetHwidBtn: 'Reset HWID',
+    resetHwid: 'Reset HWID',
     resetHwidSuccess: 'HWID reset successfully',
     deleteKeySuccess: 'Key deleted successfully',
     noKeysFound: 'No license keys found',
@@ -170,8 +181,45 @@ export const en = {
     newPasswordPlaceholder: 'Enter new password',
     confirmPassword: 'Confirm New Password',
     confirmPasswordPlaceholder: 'Confirm new password again',
-    confirmChangeBtn: 'Confirm Password Change',
-    passwordMismatch: 'New passwords do not match!',
-    passwordChangedSuccess: 'Password changed successfully!'
+    confirmChangeBtn: 'Confirm Changes',
+    passwordMismatch: 'New passwords do not match',
+    passwordChangedSuccess: 'Password changed successfully',
+    
+    // System Logo Settings
+    logoSettingsTitle: 'System Logo Settings',
+    logoSettingsDesc: 'Upload a new image to change the login and main logo',
+    uploadLogoBtn: 'Select New Logo',
+    removeLogoBtn: 'Remove & Use Default',
+    saveLogoBtn: 'Save Logo',
+    logoSavedSuccess: 'Logo saved successfully!',
+    logoRemovedSuccess: 'Reverted to default logo',
+    
+    announcementsTitle: 'Announcement Management',
+    announcementsDesc: 'Create and manage announcements displayed on the reseller portal',
+    createNewAnnouncement: 'Create Announcement',
+    announcementHistory: 'Announcement History',
+    createAnnouncementModalTitle: 'Create New Announcement',
+    createAnnouncementModalDesc: 'Fill in all information for all members to acknowledge',
+    annImageUploadTitle: 'Click to upload image',
+    annImageUploadDesc: 'PNG, JPG max 5MB',
+    annImageLabel: 'Announcement Image',
+    annTitleLabel: 'Announcement Title',
+    annTitlePlaceholder: 'e.g. Clan War, Meeting',
+    annTypeLabel: 'Announcement Type',
+    annTypeClan: 'Server Announcement',
+    annTypeMeeting: 'Meeting',
+    annTypeWar: 'War',
+    annDescLabel: 'Description (Long text)',
+    annDescPlaceholder: 'Describe event details...',
+    annDateLabel: 'Date',
+    annTimeLabel: 'Time',
+    annCancelBtn: 'Cancel',
+    annSaveBtn: 'Save',
+    annActive: 'Active',
+    annInactive: 'Inactive',
+    annTurnOn: 'Turn On',
+    annTurnOff: 'Turn Off',
+    annDelete: 'Delete Announcement',
+    noAnnouncements: 'No announcement history'
   }
 };

@@ -15,6 +15,7 @@ export function PackageSettingsModal({ isOpen, onClose }: PackageSettingsModalPr
   
   // State for new package form
   const [newDays, setNewDays] = useState('');
+  const [newUnit, setNewUnit] = useState<'days' | 'hours'>('days');
   const [newCost, setNewCost] = useState('');
 
   useEffect(() => {
@@ -39,23 +40,35 @@ export function PackageSettingsModal({ isOpen, onClose }: PackageSettingsModalPr
 
   const handleAddPackage = (e: React.FormEvent) => {
     e.preventDefault();
-    const days = parseInt(newDays, 10);
+    const rawValue = parseInt(newDays, 10);
     const cost = parseInt(newCost, 10);
     
-    if (days > 0 && cost >= 0) {
+    if (rawValue > 0 && cost >= 0) {
+      const days = newUnit === 'hours' ? -rawValue : rawValue;
       if (localPackages.find(p => p.days === days)) {
         toast.error('มีแพ็กเกจเวลานี้อยู่ในระบบแล้ว');
         return;
       }
       
+      const label = newUnit === 'hours'
+        ? `${rawValue} Hour${rawValue > 1 ? 's' : ''}`
+        : `${rawValue} Day${rawValue > 1 ? 's' : ''}`;
+
       const newPkg: Package = {
         days,
-        label: `${days} Day${days > 1 ? 's' : ''}`,
+        label,
         cost
       };
       
       addPackage(newPkg);
-      setLocalPackages(prev => [...prev, newPkg].sort((a, b) => a.days - b.days));
+      setLocalPackages(prev => {
+        const arr = [...prev, newPkg];
+        return arr.sort((a, b) => {
+          const valA = a.days < 0 ? Math.abs(a.days) : a.days * 24;
+          const valB = b.days < 0 ? Math.abs(b.days) : b.days * 24;
+          return valA - valB;
+        });
+      });
       toast.success('เพิ่มแพ็กเกจใหม่เรียบร้อยแล้ว');
       setNewDays('');
       setNewCost('');
@@ -146,16 +159,24 @@ export function PackageSettingsModal({ isOpen, onClose }: PackageSettingsModalPr
                 <div className="bg-[#1C1F2E]/50 border border-gray-800/60 p-4 rounded-xl">
                   <div className="text-sm font-bold text-white mb-3">เพิ่มแพ็กเกจใหม่</div>
                   <form onSubmit={handleAddPackage} className="flex gap-2">
-                    <div className="flex-1">
+                    <div className="flex-1 flex gap-1">
                       <input 
                         type="number"
                         min="1"
                         required
                         value={newDays}
                         onChange={(e) => setNewDays(e.target.value)}
-                        placeholder="จำนวนวัน (Days)"
-                        className="w-full bg-[#0F111A] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                        placeholder="ระยะเวลา"
+                        className="w-1/2 bg-[#0F111A] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50 transition-colors"
                       />
+                      <select
+                        value={newUnit}
+                        onChange={(e) => setNewUnit(e.target.value as 'days'|'hours')}
+                        className="w-1/2 bg-[#0F111A] border border-gray-700 rounded-lg px-2 py-2 text-white text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                      >
+                        <option value="days">วัน (Days)</option>
+                        <option value="hours">ชม. (Hours)</option>
+                      </select>
                     </div>
                     <div className="flex-1">
                       <input 

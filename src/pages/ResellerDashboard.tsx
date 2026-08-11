@@ -5,6 +5,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { Coins, KeyRound, ShoppingCart, Copy, CheckCircle, X, Package, Minus, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCsrfToken, initSecurityHardening } from '../utils/security';
+import { AnnouncementPopupModal } from '../components/ui/AnnouncementPopupModal';
 import type { LicenseKey } from '../store/useStore';
 
 // ─── Result Modal (multi-key) ─────────────────────────────────────────────────
@@ -53,7 +54,10 @@ function KeyResultModal({ keys, onClose }: { keys: LicenseKey[]; onClose: () => 
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">{t('reseller.pullSuccess')}</h2>
-              <p className="text-gray-400 text-xs">{t('reseller.receivedKeys')} <span className="text-green-400 font-bold">{keys.length} {t('reseller.keys')}</span> · {keys[0]?.durationDays} {t('reseller.days')}/Device</p>
+              <p className="text-gray-400 text-xs">
+                {t('reseller.receivedKeys')} <span className="text-green-400 font-bold">{keys.length} {t('reseller.keys')}</span> · 
+                {keys[0] ? (keys[0].durationDays < 0 ? `${Math.abs(keys[0].durationDays)} Hour(s)` : `${keys[0].durationDays} ${t('reseller.days')}`) : ''}/Device
+              </p>
             </div>
           </div>
 
@@ -136,7 +140,6 @@ export function ResellerDashboard() {
   const [resultKeys, setResultKeys] = useState<LicenseKey[] | null>(null);
   const [redeemingDays, setRedeemingDays] = useState<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number>(0);
-  // quantity per package
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
   useEffect(() => {
@@ -240,11 +243,10 @@ export function ResellerDashboard() {
           const qty = getQty(pkg.days);
           const unitCost = partner.customPrices?.[pkg.days] ?? pkg.cost;
           const totalCost = unitCost * qty;
-          const canAfford = partner.balance >= unitCost; // can afford at least 1
+          const canAfford = partner.balance >= unitCost; 
           const canAffordQty = partner.balance >= totalCost;
           const available = stock > 0 && canAfford;
 
-          // Generate dynamic accent colors based on package days
           const accentClass = 
             pkg.days === 1 ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/5 border-blue-500/30 text-blue-400' :
             pkg.days === 3 ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/5 border-green-500/30 text-green-400' :
@@ -301,7 +303,7 @@ export function ResellerDashboard() {
                   <div className="p-1.5 bg-gray-800/50 rounded-lg">
                     <KeyRound size={14} className="text-gray-400" />
                   </div>
-                  <span className="text-xs text-gray-300 font-medium">{t('reseller.keyFor', { days: pkg.days })}</span>
+                  <span className="text-xs text-gray-300 font-medium">{pkg.label}</span>
                 </div>
                 {/* Quantity picker */}
                 <div className="flex items-center justify-between">
@@ -357,6 +359,8 @@ export function ResellerDashboard() {
       {resultKeys && (
         <KeyResultModal keys={resultKeys} onClose={() => setResultKeys(null)} />
       )}
+
+      <AnnouncementPopupModal />
     </div>
   );
 }

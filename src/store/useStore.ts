@@ -42,12 +42,26 @@ export interface ResetRequest {
   createdAt: number;
 }
 
+export interface Announcement {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  date: string;
+  time: string;
+  imageBase64: string | null;
+  isActive: boolean;
+  createdAt: number;
+}
+
 interface AdminState {
   adminBalance: number;
+  globalLogoUrl: string | null;
   partners: Partner[];
   keys: LicenseKey[];
   packages: Package[];
   resetRequests: ResetRequest[];
+  announcements: Announcement[];
   currentAdmin: boolean;
   currentReseller: Partner | null;
 
@@ -55,6 +69,9 @@ interface AdminState {
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
   logoutAdmin: () => void;
   logoutReseller: () => void;
+
+  // System Settings
+  updateGlobalLogo: (base64: string | null) => void;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -81,6 +98,11 @@ interface AdminState {
   updatePackageCost: (days: number, newCost: number) => void;
   addPackage: (pkg: Package) => void;
   deletePackage: (days: number) => void;
+
+  // Announcement management (admin)
+  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => void;
+  toggleAnnouncementActive: (id: string) => void;
+  deleteAnnouncement: (id: string) => void;
 
   // Reseller action - requires CSRF token
   redeemKey: (durationDays: number, quantity: number, csrfToken: string) => LicenseKey[] | 'no_stock' | 'no_credit' | 'csrf_error' | 'locked' | 'partial';
@@ -125,10 +147,12 @@ export const useStore = create<AdminState>()(
   persist(
     (set, get) => ({
       adminBalance: 90000000000000000,
+      globalLogoUrl: null,
       partners: [],
       keys: [],
       packages: [],
       resetRequests: [],
+      announcements: [],
       currentAdmin: false,
       currentReseller: null,
 
@@ -160,6 +184,12 @@ export const useStore = create<AdminState>()(
       logoutReseller: () => {
         set({ currentReseller: null });
         generateCsrfToken();
+      },
+
+      // ─── SYSTEM SETTINGS ───────────────────────────────────────────────────
+      updateGlobalLogo: (base64) => {
+        set({ globalLogoUrl: base64 });
+        setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true }).catch(console.error);
       },
 
       // ─── PARTNER CRUD ────────────────────────────────────────────────────────
@@ -389,7 +419,11 @@ export const useStore = create<AdminState>()(
       addPackage: (pkg) => {
         const { packages } = get();
         if (!packages.find(p => p.days === pkg.days)) {
-          const newPackages = [...packages, pkg].sort((a, b) => a.days - b.days);
+          const newPackages = [...packages, pkg].sort((a, b) => {
+            const valA = a.days < 0 ? Math.abs(a.days) : a.days * 24;
+            const valB = b.days < 0 ? Math.abs(b.days) : b.days * 24;
+            return valA - valB;
+          });
           set({ packages: newPackages });
           setDoc(doc(db, 'packages', pkg.days.toString()), pkg);
         }
@@ -399,6 +433,63 @@ export const useStore = create<AdminState>()(
         const { packages } = get();
         set({ packages: packages.filter(p => p.days !== days) });
         deleteDoc(doc(db, 'packages', days.toString()));
+      },
+
+      // ─── ANNOUNCEMENT MANAGEMENT ──────────────────────────────────────────────
+      addAnnouncement: (announcement) => {
+        const { announcements } = get();
+        const newAnnouncement: Announcement = {
+          ...announcement,
+          id: generateRandomString(10),
+          createdAt: Date.now(),
+        };
+        // Disable other announcements to keep only one active
+        const updatedAnnouncements = announcements.map(a => 
+          newAnnouncement.isActive ? { ...a, isActive: false } : a
+        );
+        
+        set({ announcements: [newAnnouncement, ...updatedAnnouncements] });
+        
+        const batch = writeBatch(db);
+        if (newAnnouncement.isActive) {
+          updatedAnnouncements.forEach(a => {
+            batch.set(doc(db, 'announcements', a.id), { isActive: false }, { merge: true });
+          });
+        }
+        batch.set(doc(db, 'announcements', newAnnouncement.id), newAnnouncement);
+        batch.commit();
+      },
+
+      toggleAnnouncementActive: (id) => {
+        const { announcements } = get();
+        const target = announcements.find(a => a.id === id);
+        if (!target) return;
+        
+        const isTurningOn = !target.isActive;
+        const newAnnouncements = announcements.map(a => {
+          if (a.id === id) return { ...a, isActive: isTurningOn };
+          if (isTurningOn) return { ...a, isActive: false }; // Turn off others
+          return a;
+        });
+
+        set({ announcements: newAnnouncements });
+
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'announcements', id), { isActive: isTurningOn }, { merge: true });
+        if (isTurningOn) {
+          announcements.forEach(a => {
+            if (a.id !== id && a.isActive) {
+              batch.set(doc(db, 'announcements', a.id), { isActive: false }, { merge: true });
+            }
+          });
+        }
+        batch.commit();
+      },
+
+      deleteAnnouncement: (id) => {
+        const { announcements } = get();
+        set({ announcements: announcements.filter(a => a.id !== id) });
+        deleteDoc(doc(db, 'announcements', id));
       },
 
       // ─── RESELLER ACTIONS ─────────────────────────────────────────────────────
@@ -468,10 +559,11 @@ export const useStore = create<AdminState>()(
     }),
     {
       name: 'blueret-storage',
-      // Only persist local auth state
+      // Only persist local auth state and logo cache
       partialize: (state) => ({
         currentAdmin: state.currentAdmin,
         currentReseller: state.currentReseller,
+        globalLogoUrl: state.globalLogoUrl,
       }),
     }
   )
@@ -502,7 +594,11 @@ export async function initFirebaseSync() {
 
   onSnapshot(globalConfigRef, (docSnap: any) => {
     if (docSnap.exists()) {
-      useStore.setState({ adminBalance: docSnap.data().adminBalance });
+      const data = docSnap.data();
+      useStore.setState({ 
+        adminBalance: data.adminBalance,
+        globalLogoUrl: data.logoUrl || null
+      });
     }
   });
 
@@ -518,11 +614,20 @@ export async function initFirebaseSync() {
 
   onSnapshot(collection(db, 'packages'), (snapshot: any) => {
     const packages = snapshot.docs.map((doc: any) => doc.data() as Package);
-    useStore.setState({ packages: packages.sort((a: any, b: any) => a.days - b.days) });
+    useStore.setState({ packages: packages.sort((a: any, b: any) => {
+      const valA = a.days < 0 ? Math.abs(a.days) : a.days * 24;
+      const valB = b.days < 0 ? Math.abs(b.days) : b.days * 24;
+      return valA - valB;
+    }) });
   });
 
   onSnapshot(collection(db, 'resetRequests'), (snapshot: any) => {
     const resetRequests = snapshot.docs.map((doc: any) => doc.data() as ResetRequest);
     useStore.setState({ resetRequests: resetRequests.sort((a: any, b: any) => b.createdAt - a.createdAt) });
+  });
+
+  onSnapshot(collection(db, 'announcements'), (snapshot: any) => {
+    const announcements = snapshot.docs.map((doc: any) => doc.data() as Announcement);
+    useStore.setState({ announcements: announcements.sort((a: any, b: any) => b.createdAt - a.createdAt) });
   });
 }

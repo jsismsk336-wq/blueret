@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SpaceBackground } from '../components/ui/SpaceBackground';
 import { GlassCard } from '../components/ui/GlassCard';
 import { NeonLogo } from '../components/ui/NeonLogo';
+import dnaBg from '../assets/dna-bg.png';
 import { NeonInput } from '../components/ui/NeonInput';
 import { GradientButton } from '../components/ui/GradientButton';
 import { useStore } from '../store/useStore';
@@ -92,12 +92,19 @@ export function Login() {
   const lockSeconds = Math.ceil(lockoutMs / 1000);
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative px-4">
-      <SpaceBackground />
+    <div className="min-h-screen flex items-center justify-center relative px-4 overflow-hidden bg-black">
+      {/* Animated DNA Background */}
+      <div 
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat animate-slow-zoom"
+        style={{ backgroundImage: `url(${dnaBg})` }}
+      />
       
-      <GlassCard className="w-full max-w-[420px] p-8 md:p-10 flex flex-col items-center">
+      {/* Dark Overlay to make the form readable */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#0F111A]/80 to-[#0B0E14]/95 backdrop-blur-[2px]" />
+      
+      <GlassCard className="w-full max-w-[420px] p-8 md:p-10 flex flex-col items-center relative z-10 border-white/5 bg-[#0B0E14]/40">
         <div className="mb-4">
-          <NeonLogo />
+          <NeonLogo size="lg" />
         </div>
         
         <h1 className="text-2xl font-bold tracking-wider text-white mb-1">BLUERET</h1>

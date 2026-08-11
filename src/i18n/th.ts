@@ -5,6 +5,7 @@ export const th = {
     keys: 'ประวัติคีย์ใช้งาน',
     settings: 'ตั้งค่าความปลอดภัย',
     resetRequests: 'คำขอรีเซ็ตคีย์',
+    announcements: 'จัดการประกาศ',
     adminTitle: 'BLUERET แอดมิน',
     adminRole: 'ผู้ดูแลระบบหลัก'
   },
@@ -72,7 +73,10 @@ export const th = {
     resetApproved: 'รีเซ็ตสำเร็จแล้ว',
     waitingReset: 'รออนุมัติรีเซ็ต...',
     rejected: 'ถูกปฏิเสธ',
-    requestReset: 'ขอรีเซ็ต'
+    requestReset: 'ขอรีเซ็ต',
+    announcements: 'ประวัติประกาศ',
+    acknowledgeAnn: 'รับทราบประกาศ',
+    acknowledgeDesc: 'คลิกเพื่อรับทราบและปิดหน้าต่างนี้'
   },
   admin: {
     overviewTitle: 'แผงควบคุมหลัก',
@@ -170,8 +174,45 @@ export const th = {
     newPasswordPlaceholder: 'กรอกรหัสผ่านใหม่',
     confirmPassword: 'ยืนยันรหัสผ่านใหม่',
     confirmPasswordPlaceholder: 'ยืนยันรหัสผ่านใหม่อีกครั้ง',
-    confirmChangeBtn: 'ยืนยันการเปลี่ยนรหัสผ่าน',
-    passwordMismatch: 'รหัสผ่านใหม่ไม่ตรงกัน!',
-    passwordChangedSuccess: 'เปลี่ยนรหัสผ่านสำเร็จ!'
+    confirmChangeBtn: 'ยืนยันการเปลี่ยนแปลง',
+    passwordMismatch: 'รหัสผ่านใหม่ไม่ตรงกัน',
+    passwordChangedSuccess: 'เปลี่ยนรหัสผ่านสำเร็จ',
+    
+    // System Logo Settings
+    logoSettingsTitle: 'ตั้งค่ารูปโลโก้ระบบ',
+    logoSettingsDesc: 'อัปโหลดรูปภาพใหม่เพื่อเปลี่ยนโลโก้หน้าเข้าสู่ระบบและโลโก้หลัก',
+    uploadLogoBtn: 'เลือกรูปโลโก้ใหม่',
+    removeLogoBtn: 'ลบรูปและใช้ค่าเริ่มต้น',
+    saveLogoBtn: 'บันทึกโลโก้',
+    logoSavedSuccess: 'บันทึกโลโก้สำเร็จ!',
+    logoRemovedSuccess: 'กลับไปใช้โลโก้เริ่มต้นแล้ว',
+
+    announcementsTitle: 'ระบบจัดการประกาศ',
+    announcementsDesc: 'สร้างและจัดการประกาศแจ้งเตือนที่จะไปแสดงบนหน้าเว็บตัวแทนจำหน่าย',
+    createNewAnnouncement: 'สร้างประกาศใหม่',
+    announcementHistory: 'ประวัติประกาศทั้งหมด',
+    createAnnouncementModalTitle: 'สร้างประกาศ/กิจกรรมใหม่',
+    createAnnouncementModalDesc: 'กรอกข้อมูลให้ครบถ้วนเพื่อให้สมาชิกทุกคนรับทราบ',
+    annImageUploadTitle: 'คลิกเพื่ออัปโหลดรูปภาพ',
+    annImageUploadDesc: 'PNG, JPG ขนาดไม่เกิน 5MB',
+    annImageLabel: 'รูปภาพประกอบประกาศ',
+    annTitleLabel: 'หัวข้อประกาศ',
+    annTitlePlaceholder: 'เช่น ตีป้อม, นัดประชุม',
+    annTypeLabel: 'ประเภทประกาศ',
+    annTypeClan: 'ประกาศเซิฟเวอร์',
+    annTypeMeeting: 'การประชุม',
+    annTypeWar: 'สงคราม',
+    annDescLabel: 'รายละเอียด (ยาวได้)',
+    annDescPlaceholder: 'อธิบายรายละเอียดกิจกรรม...',
+    annDateLabel: 'วันที่',
+    annTimeLabel: 'เวลา',
+    annCancelBtn: 'ยกเลิก',
+    annSaveBtn: 'บันทึก',
+    annActive: 'กำลังประกาศ',
+    annInactive: 'ปิดประกาศแล้ว',
+    annTurnOn: 'เปิดใช้งาน',
+    annTurnOff: 'ปิดใช้งาน',
+    annDelete: 'ลบประกาศ',
+    noAnnouncements: 'ยังไม่มีประวัติการสร้างประกาศ'
   }
 };

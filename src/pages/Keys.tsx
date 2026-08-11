@@ -124,7 +124,9 @@ export function Keys() {
                   <td className="px-6 py-4">
                     <span className="font-bold text-gray-200">{key.keyString}</span>
                   </td>
-                  <td className="px-6 py-4 text-center font-bold text-primary">{key.durationDays}D</td>
+                  <td className="px-6 py-4 text-center font-bold text-primary">
+                    {key.durationDays < 0 ? `${Math.abs(key.durationDays)}H` : `${key.durationDays}D`}
+                  </td>
                   <td className="px-6 py-4 text-center text-gray-400">{key.createdBy}</td>
                   <td className="px-6 py-4 text-center">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(key.status)}`}>
