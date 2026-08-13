@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Lock, ImagePlus, X, Save } from 'lucide-react';
+import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../hooks/useTranslation';
@@ -11,9 +11,12 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const { globalLogoUrl, updateGlobalLogo } = useStore();
+  const { globalLogoUrl, updateGlobalLogo, apiEndpoint, apiToken, updateApiSettings } = useStore();
   const [logoPreview, setLogoPreview] = useState<string | null>(globalLogoUrl);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [localApiEndpoint, setLocalApiEndpoint] = useState(apiEndpoint || '');
+  const [localApiToken, setLocalApiToken] = useState(apiToken || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +84,11 @@ export function Settings() {
     updateGlobalLogo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     toast.success(t('admin.logoRemovedSuccess'));
+  };
+
+  const handleSaveApi = () => {
+    updateApiSettings(localApiEndpoint, localApiToken);
+    toast.success('บันทึกการตั้งค่า API สำเร็จ');
   };
 
   return (
@@ -197,6 +205,53 @@ export function Settings() {
             >
               <Save size={18} />
               {t('admin.saveLogoBtn')}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* API Settings */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-[#161925] border border-gray-800/60 rounded-2xl p-6 max-w-xl mt-8">
+        <div className="flex items-center gap-2 text-white font-medium mb-6">
+          <LinkIcon size={18} className="text-primary" />
+          <span>ตั้งค่าการเชื่อมต่อ API (ดึงคีย์)</span>
+        </div>
+        
+        <p className="text-sm text-gray-400 mb-6">ใช้สำหรับเชื่อมต่อเพื่อกดดึงคีย์จากแผงหลักเข้าสต็อกอัตโนมัติ</p>
+
+        <div className="flex flex-col gap-5">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-2">API Endpoint URL</label>
+            <input 
+              type="url" 
+              value={localApiEndpoint}
+              onChange={(e) => setLocalApiEndpoint(e.target.value)}
+              placeholder="https://nwtr.dev/meowt/api/genkey.php" 
+              className="w-full bg-[#0F111A] border border-gray-800/60 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 transition-colors"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-2">API Token</label>
+            <div className="relative">
+              <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input 
+                type="text" 
+                value={localApiToken}
+                onChange={(e) => setLocalApiToken(e.target.value)}
+                placeholder="mtk_xxxxxxxxxxxxxxxx" 
+                className="w-full bg-[#0F111A] border border-gray-800/60 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 transition-colors"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-800/60 mt-2">
+            <button 
+              onClick={handleSaveApi}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(123,97,255,0.2)] flex items-center justify-center gap-2"
+            >
+              <Save size={18} />
+              บันทึกการตั้งค่า API
             </button>
           </div>
         </div>

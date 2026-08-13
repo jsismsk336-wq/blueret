@@ -57,6 +57,8 @@ export interface Announcement {
 interface AdminState {
   adminBalance: number;
   globalLogoUrl: string | null;
+  apiEndpoint: string | null;
+  apiToken: string | null;
   partners: Partner[];
   keys: LicenseKey[];
   packages: Package[];
@@ -72,6 +74,7 @@ interface AdminState {
 
   // System Settings
   updateGlobalLogo: (base64: string | null) => void;
+  updateApiSettings: (endpoint: string, token: string) => void;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -148,6 +151,8 @@ export const useStore = create<AdminState>()(
     (set, get) => ({
       adminBalance: 90000000000000000,
       globalLogoUrl: null,
+      apiEndpoint: null,
+      apiToken: null,
       partners: [],
       keys: [],
       packages: [],
@@ -190,6 +195,11 @@ export const useStore = create<AdminState>()(
       updateGlobalLogo: (base64) => {
         set({ globalLogoUrl: base64 });
         setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true }).catch(console.error);
+      },
+
+      updateApiSettings: (endpoint, token) => {
+        set({ apiEndpoint: endpoint, apiToken: token });
+        setDoc(doc(db, 'config', 'global'), { apiEndpoint: endpoint, apiToken: token }, { merge: true }).catch(console.error);
       },
 
       // ─── PARTNER CRUD ────────────────────────────────────────────────────────
@@ -564,6 +574,8 @@ export const useStore = create<AdminState>()(
         currentAdmin: state.currentAdmin,
         currentReseller: state.currentReseller,
         globalLogoUrl: state.globalLogoUrl,
+        apiEndpoint: state.apiEndpoint,
+        apiToken: state.apiToken,
       }),
     }
   )
@@ -597,7 +609,9 @@ export async function initFirebaseSync() {
       const data = docSnap.data();
       useStore.setState({ 
         adminBalance: data.adminBalance,
-        globalLogoUrl: data.logoUrl || null
+        globalLogoUrl: data.logoUrl || null,
+        apiEndpoint: data.apiEndpoint || null,
+        apiToken: data.apiToken || null
       });
     }
   });
