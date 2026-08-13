@@ -32,6 +32,148 @@ const secureStorage = {
   },
 };
 
+export interface Partner {
+  id: string;
+  username: string;
+  password: string;
+  role: string;
+  balance: number;
+  status: 'active' | 'suspended';
+  customPrices?: Record<number, number>;
+}
+
+export interface LicenseKey {
+  id: string;
+  keyString: string;
+  durationDays: number;
+  createdAt: number;
+  status: 'unused' | 'active';
+  hwid: string | null;
+  createdBy: string;
+  redeemedBy: string | null;
+  redeemedAt: number | null;
+}
+
+export interface Package {
+  days: number;
+  label: string;
+  cost: number;
+}
+
+export interface ResetRequest {
+  id: string;
+  keyId: string;
+  keyString: string;
+  resellerId: string;
+  resellerName: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: number;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  date: string;
+  time: string;
+  imageBase64: string | null;
+  isActive: boolean;
+  createdAt: number;
+}
+
+interface AdminState {
+  adminBalance: number;
+  globalLogoUrl: string | null;
+  apiEndpoint: string | null;
+  apiToken: string | null;
+  partners: Partner[];
+  keys: LicenseKey[];
+  packages: Package[];
+  resetRequests: ResetRequest[];
+  announcements: Announcement[];
+  currentAdmin: boolean;
+  currentReseller: Partner | null;
+
+  // Auth
+  login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
+  logoutAdmin: () => void;
+  logoutReseller: () => void;
+
+  // System Settings
+  updateGlobalLogo: (base64: string | null) => void;
+  updateApiSettings: (endpoint: string, token: string) => void;
+
+  // Partner CRUD
+  addPartner: (username: string, password: string) => void;
+  updatePartnerBalance: (id: string, amount: number) => void;
+  updatePartnerPassword: (id: string, newPassword: string) => void;
+  togglePartnerStatus: (id: string) => void;
+  deletePartner: (id: string) => void;
+  updatePartnerCustomPrices: (id: string, customPrices: Record<number, number>) => void;
+
+  // Key management (admin)
+  generateKey: (durationDays: number, cost: number, creator: string, amount?: number) => boolean;
+  importKeys: (durationDays: number, importedKeys: string[], creator: string) => void;
+  resetHwid: (id: string) => void;
+  deleteKey: (id: string) => void;
+  deleteAllKeys: () => void;
+  clearStockByDuration: (durationDays: number) => void;
+
+  // Reset Requests Management
+  requestReset: (keyId: string, keyString: string) => void;
+  approveReset: (requestId: string) => void;
+  rejectReset: (requestId: string) => void;
+
+  // Package management (admin)
+  updatePackageCost: (days: number, newCost: number) => void;
+  addPackage: (pkg: Package) => void;
+  deletePackage: (days: number) => void;
+
+  // Announcement management (admin)
+  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => void;
+  toggleAnnouncementActive: (id: string) => void;
+  deleteAnnouncement: (id: string) => void;
+
+  // Reseller action - requires CSRF token
+  redeemKey: (durationDays: number, quantity: number, csrfToken: string) => Promise<LicenseKey[] | 'no_stock' | 'no_credit' | 'csrf_error' | 'locked' | 'partial'>;
+}
+
+const generateRandomString = (length: number) => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+const initialPartners: Partner[] = [
+  { id: '1', username: 'Seeyou', password: '123456', role: 'พาร์ทเนอร์พอร์ตทัล', balance: 100.0, status: 'active', customPrices: {} },
+  { id: '2', username: 'devlucky', password: '123456', role: 'พาร์ทเนอร์พอร์ตทัล', balance: 90000000000000000, status: 'active', customPrices: {} },
+];
+
+const initialKeys: LicenseKey[] = [
+  {
+    id: 'k1',
+    keyString: 'BLUERET-WYJJAS-YNZJB',
+    durationDays: 30,
+    createdAt: Date.now() - 1000000,
+    status: 'active',
+    hwid: 'LUCKY-RE2P****YH',
+    createdBy: 'devlucky',
+    redeemedBy: null,
+    redeemedAt: null,
+  }
+];
+
+const initialPackages: Package[] = [
+  { days: 1, label: '1 Day', cost: 10 },
+  { days: 3, label: '3 Days', cost: 25 },
+  { days: 7, label: '7 Days', cost: 50 },
+  { days: 30, label: '30 Days', cost: 150 },
+];
+
 export const useStore = create<AdminState>()(
   persist(
     (set, get) => ({
