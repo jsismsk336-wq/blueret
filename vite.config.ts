@@ -13,5 +13,15 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/proxy-genkey/, '')
       }
     }
-  }
+  },
+  build: {
+    sourcemap: false,
+    minify: true,
+    target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
 })

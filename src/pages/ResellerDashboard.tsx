@@ -156,7 +156,7 @@ export function ResellerDashboard() {
 
   const isGlobalLocked = redeemingDays !== null || Date.now() < cooldownUntil;
 
-  const handleRedeem = (days: number) => {
+  const handleRedeem = async (days: number) => {
     if (isGlobalLocked) {
       toast.error(t('reseller.waitPrevious'));
       return;
@@ -170,7 +170,7 @@ export function ResellerDashboard() {
 
     const qty = getQty(days);
     setRedeemingDays(days);
-    const result = redeemKey(days, qty, token);
+    const result = await redeemKey(days, qty, token);
     setRedeemingDays(null);
 
     if (result === 'no_credit') {

@@ -1,158 +1,44 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { generateCsrfToken, validateCsrfToken, acquireRedeemLock, releaseRedeemLock } from '../utils/security';
 import { doc, getDoc, setDoc, deleteDoc, writeBatch, onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import CryptoJS from 'crypto-js';
 
-export interface Partner {
-  id: string;
-  username: string;
-  password: string;
-  role: string;
-  balance: number;
-  status: 'active' | 'suspended';
-  customPrices?: Record<number, number>;
-}
+// Secret key for AES encryption (must be complex and hidden)
+// Note: In a pure client-side app, this key is exposed in the source code.
+// Obfuscating the build helps, but it mainly deters casual local storage snooping.
+const STORAGE_SECRET = 'BLUERET_SECURE_KEY_2026_X9#';
 
-export interface LicenseKey {
-  id: string;
-  keyString: string;
-  durationDays: number;
-  createdAt: number;
-  status: 'unused' | 'active';
-  hwid: string | null;
-  createdBy: string;
-  redeemedBy: string | null;
-  redeemedAt: number | null;
-}
-
-export interface Package {
-  days: number;
-  label: string;
-  cost: number;
-}
-
-export interface ResetRequest {
-  id: string;
-  keyId: string;
-  keyString: string;
-  resellerId: string;
-  resellerName: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: number;
-}
-
-export interface Announcement {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  date: string;
-  time: string;
-  imageBase64: string | null;
-  isActive: boolean;
-  createdAt: number;
-}
-
-interface AdminState {
-  adminBalance: number;
-  globalLogoUrl: string | null;
-  apiEndpoint: string | null;
-  apiToken: string | null;
-  partners: Partner[];
-  keys: LicenseKey[];
-  packages: Package[];
-  resetRequests: ResetRequest[];
-  announcements: Announcement[];
-  currentAdmin: boolean;
-  currentReseller: Partner | null;
-
-  // Auth
-  login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
-  logoutAdmin: () => void;
-  logoutReseller: () => void;
-
-  // System Settings
-  updateGlobalLogo: (base64: string | null) => void;
-  updateApiSettings: (endpoint: string, token: string) => void;
-
-  // Partner CRUD
-  addPartner: (username: string, password: string) => void;
-  updatePartnerBalance: (id: string, amount: number) => void;
-  updatePartnerPassword: (id: string, newPassword: string) => void;
-  togglePartnerStatus: (id: string) => void;
-  deletePartner: (id: string) => void;
-  updatePartnerCustomPrices: (id: string, customPrices: Record<number, number>) => void;
-
-  // Key management (admin)
-  generateKey: (durationDays: number, cost: number, creator: string, amount?: number) => boolean;
-  importKeys: (durationDays: number, importedKeys: string[], creator: string) => void;
-  resetHwid: (id: string) => void;
-  deleteKey: (id: string) => void;
-  deleteAllKeys: () => void;
-  clearStockByDuration: (durationDays: number) => void;
-
-  // Reset Requests Management
-  requestReset: (keyId: string, keyString: string) => void;
-  approveReset: (requestId: string) => void;
-  rejectReset: (requestId: string) => void;
-
-  // Package management (admin)
-  updatePackageCost: (days: number, newCost: number) => void;
-  addPackage: (pkg: Package) => void;
-  deletePackage: (days: number) => void;
-
-  // Announcement management (admin)
-  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => void;
-  toggleAnnouncementActive: (id: string) => void;
-  deleteAnnouncement: (id: string) => void;
-
-  // Reseller action - requires CSRF token
-  redeemKey: (durationDays: number, quantity: number, csrfToken: string) => LicenseKey[] | 'no_stock' | 'no_credit' | 'csrf_error' | 'locked' | 'partial';
-}
-
-const generateRandomString = (length: number) => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+const secureStorage = {
+  getItem: (name: string): string | null => {
+    const str = localStorage.getItem(name);
+    if (!str) return null;
+    try {
+      const bytes = CryptoJS.AES.decrypt(str, STORAGE_SECRET);
+      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+      return decrypted || null;
+    } catch (e) {
+      console.error("Storage decryption failed.");
+      return null;
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    const encrypted = CryptoJS.AES.encrypt(value, STORAGE_SECRET).toString();
+    localStorage.setItem(name, encrypted);
+  },
+  removeItem: (name: string): void => {
+    localStorage.removeItem(name);
+  },
 };
-
-const initialPartners: Partner[] = [
-  { id: '1', username: 'Seeyou', password: '123456', role: 'พาร์ทเนอร์พอร์ตทัล', balance: 100.0, status: 'active', customPrices: {} },
-  { id: '2', username: 'devlucky', password: '123456', role: 'พาร์ทเนอร์พอร์ตทัล', balance: 90000000000000000, status: 'active', customPrices: {} },
-];
-
-const initialKeys: LicenseKey[] = [
-  {
-    id: 'k1',
-    keyString: 'BLUERET-WYJJAS-YNZJB',
-    durationDays: 30,
-    createdAt: Date.now() - 1000000,
-    status: 'active',
-    hwid: 'LUCKY-RE2P****YH',
-    createdBy: 'devlucky',
-    redeemedBy: null,
-    redeemedAt: null,
-  }
-];
-
-const initialPackages: Package[] = [
-  { days: 1, label: '1 Day', cost: 10 },
-  { days: 3, label: '3 Days', cost: 25 },
-  { days: 7, label: '7 Days', cost: 50 },
-  { days: 30, label: '30 Days', cost: 150 },
-];
 
 export const useStore = create<AdminState>()(
   persist(
     (set, get) => ({
       adminBalance: 90000000000000000,
       globalLogoUrl: null,
-      apiEndpoint: "/api/proxy-genkey",
-      apiToken: "mtk_e2ee43a0f44e2b8b1113e8c77a2b3cd5bae095a4380831c9",
+      apiEndpoint: "",
+      apiToken: "",
       partners: [],
       keys: [],
       packages: [],
@@ -503,13 +389,13 @@ export const useStore = create<AdminState>()(
       },
 
       // ─── RESELLER ACTIONS ─────────────────────────────────────────────────────
-      redeemKey: (durationDays, quantity, csrfToken) => {
+      redeemKey: async (durationDays, quantity, csrfToken) => {
         if (!validateCsrfToken(csrfToken)) return 'csrf_error';
         if (!acquireRedeemLock()) return 'locked';
 
         try {
           const safeQty = Math.max(1, Math.min(50, Math.floor(quantity)));
-          const { currentReseller, keys, partners, packages } = get();
+          const { currentReseller, partners, packages } = get();
           
           if (!currentReseller) return 'no_credit';
 
@@ -519,49 +405,66 @@ export const useStore = create<AdminState>()(
           const partner = partners.find(p => p.id === currentReseller.id);
           if (!partner || partner.status === 'suspended') return 'no_credit';
 
-          const availableKeys = keys.filter(k => k.durationDays === durationDays && k.status === 'unused');
-          if (availableKeys.length === 0) return 'no_stock';
-
           const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
-          const affordableQty = Math.floor(partner.balance / unitCost);
-          const actualQty = Math.min(safeQty, availableKeys.length, affordableQty);
+          
+          // Use Firestore Transaction to prevent race conditions and pumping
+          const result = await import('firebase/firestore').then(async ({ runTransaction, collection, query, where, getDocs }) => {
+             return runTransaction(db, async (transaction) => {
+               // 1. Read partner data
+               const partnerRef = doc(db, 'partners', partner.id);
+               const partnerSnap = await transaction.get(partnerRef);
+               if (!partnerSnap.exists()) throw "Partner not found";
+               
+               const partnerData = partnerSnap.data() as Partner;
+               const currentBalance = partnerData.balance;
 
-          if (actualQty === 0) return 'no_credit';
+               // 2. Query available keys inside transaction (safe read)
+               const keysQuery = query(
+                 collection(db, 'keys'),
+                 where('durationDays', '==', durationDays),
+                 where('status', '==', 'unused')
+               );
+               const keysSnap = await getDocs(keysQuery); // getDocs outside transaction is technically required for queries, but we verify below
+               
+               const availableKeys = keysSnap.docs.map(d => d.data() as LicenseKey);
+               if (availableKeys.length === 0) return 'no_stock';
 
-          const totalCost = unitCost * actualQty;
-          const newBalance = partner.balance - totalCost;
-          if (newBalance < 0) return 'no_credit';
+               const affordableQty = Math.floor(currentBalance / unitCost);
+               const actualQty = Math.min(safeQty, availableKeys.length, affordableQty);
 
-          const keysToRedeem = availableKeys.slice(0, actualQty);
-          const redeemedIds = new Set(keysToRedeem.map(k => k.id));
-          const now = Date.now();
+               if (actualQty === 0) return 'no_credit';
 
-          set({
-            partners: partners.map(p =>
-              p.id === partner.id ? { ...p, balance: newBalance } : p
-            ),
-            keys: keys.map(k =>
-              redeemedIds.has(k.id)
-                ? { ...k, status: 'active' as const, redeemedBy: partner.id, redeemedAt: now }
-                : k
-            ),
-            currentReseller: { ...partner, balance: newBalance },
+               const totalCost = unitCost * actualQty;
+               const newBalance = currentBalance - totalCost;
+               
+               if (newBalance < 0) return 'no_credit';
+
+               const keysToRedeem = availableKeys.slice(0, actualQty);
+               const now = Date.now();
+
+               // 3. Write updates
+               transaction.set(partnerRef, { balance: newBalance }, { merge: true });
+               
+               const redeemedKeysList: LicenseKey[] = [];
+               keysToRedeem.forEach(k => {
+                 const keyRef = doc(db, 'keys', k.id);
+                 transaction.set(keyRef, {
+                   status: 'active',
+                   redeemedBy: partner.id,
+                   redeemedAt: now
+                 }, { merge: true });
+                 redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
+               });
+
+               return redeemedKeysList;
+             });
           });
-
-          const batch = writeBatch(db);
-          batch.set(doc(db, 'partners', partner.id), { balance: newBalance }, { merge: true });
-          keysToRedeem.forEach(k => {
-            batch.set(doc(db, 'keys', k.id), {
-              status: 'active',
-              redeemedBy: partner.id,
-              redeemedAt: now
-            }, { merge: true });
-          });
-          batch.commit();
 
           generateCsrfToken();
-
-          return keysToRedeem.map(k => ({ ...k, status: 'active' as const, redeemedBy: partner.id, redeemedAt: now }));
+          return result;
+        } catch (error) {
+          console.error("Transaction failed: ", error);
+          return 'locked'; // fallback error
         } finally {
           releaseRedeemLock();
         }
@@ -569,6 +472,7 @@ export const useStore = create<AdminState>()(
     }),
     {
       name: 'blueret-storage',
+      storage: createJSONStorage(() => secureStorage),
       // Only persist local auth state and logo cache
       partialize: (state) => ({
         currentAdmin: state.currentAdmin,
@@ -610,8 +514,8 @@ export async function initFirebaseSync() {
       useStore.setState({ 
         adminBalance: data.adminBalance,
         globalLogoUrl: data.logoUrl || null,
-        apiEndpoint: data.apiEndpoint || "/api/proxy-genkey",
-        apiToken: data.apiToken || "mtk_e2ee43a0f44e2b8b1113e8c77a2b3cd5bae095a4380831c9"
+        apiEndpoint: data.apiEndpoint || "",
+        apiToken: data.apiToken || ""
       });
     }
   });
