@@ -71,8 +71,28 @@ export function RefillStockModal({ packageData, onClose }: RefillStockModalProps
     });
 
     if (confirm.isConfirmed) {
-      const daysParam = packageData!.days > 0 ? packageData!.days : 0;
-      const hoursParam = packageData!.days < 0 ? Math.abs(packageData!.days) : 0;
+      let planValue: string | number = 'custom';
+      const days = packageData!.days;
+      
+      // Use standard plans if they match exactly to avoid expensive custom pricing
+      if (days === 1 || days === 7 || days === 30) {
+        planValue = days.toString();
+      }
+      
+      const daysParam = days > 0 ? days : 0;
+      const hoursParam = days < 0 ? Math.abs(days) : 0;
+
+      // Construct payload
+      const payload: any = {
+        plan: planValue,
+        qty: apiQty
+      };
+
+      // Only attach custom days/hours if plan is custom
+      if (planValue === 'custom') {
+        payload.days = daysParam;
+        payload.hours = hoursParam;
+      }
 
       MySwal.fire({
         title: 'กำลังสร้างคีย์...',
@@ -92,12 +112,7 @@ export function RefillStockModal({ packageData, onClose }: RefillStockModalProps
             'X-Api-Token': apiToken,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            plan: 'custom',
-            days: daysParam,
-            hours: hoursParam,
-            qty: apiQty
-          })
+          body: JSON.stringify(payload)
         });
 
         const data = await response.json();
