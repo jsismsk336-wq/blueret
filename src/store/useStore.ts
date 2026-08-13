@@ -151,8 +151,8 @@ export const useStore = create<AdminState>()(
     (set, get) => ({
       adminBalance: 90000000000000000,
       globalLogoUrl: null,
-      apiEndpoint: null,
-      apiToken: null,
+      apiEndpoint: "/api/proxy-genkey",
+      apiToken: "mtk_e2ee43a0f44e2b8b1113e8c77a2b3cd5bae095a4380831c9",
       partners: [],
       keys: [],
       packages: [],
@@ -610,8 +610,8 @@ export async function initFirebaseSync() {
       useStore.setState({ 
         adminBalance: data.adminBalance,
         globalLogoUrl: data.logoUrl || null,
-        apiEndpoint: data.apiEndpoint || null,
-        apiToken: data.apiToken || null
+        apiEndpoint: data.apiEndpoint || "/api/proxy-genkey",
+        apiToken: data.apiToken || "mtk_e2ee43a0f44e2b8b1113e8c77a2b3cd5bae095a4380831c9"
       });
     }
   });

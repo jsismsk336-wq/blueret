@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/proxy-genkey",
+      "destination": "https://nwtr.dev/meowt/api/genkey.php"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
