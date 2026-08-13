@@ -236,7 +236,7 @@ export function Settings() {
             <div className="relative">
               <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
               <input 
-                type="text" 
+                type="password" 
                 value={localApiToken}
                 onChange={(e) => setLocalApiToken(e.target.value)}
                 placeholder="mtk_xxxxxxxxxxxxxxxx" 
