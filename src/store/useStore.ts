@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { generateCsrfToken, validateCsrfToken, acquireRedeemLock, releaseRedeemLock } from '../utils/security';
-import { doc, getDoc, setDoc, deleteDoc, writeBatch, onSnapshot, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import CryptoJS from 'crypto-js';
 
@@ -550,56 +550,54 @@ export const useStore = create<AdminState>()(
           const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
           
           // Use Firestore Transaction to prevent race conditions and pumping
-          const result = await import('firebase/firestore').then(async ({ runTransaction, collection, query, where, getDocs }) => {
-             return runTransaction(db, async (transaction) => {
-               // 1. Read partner data
-               const partnerRef = doc(db, 'partners', partner.id);
-               const partnerSnap = await transaction.get(partnerRef);
-               if (!partnerSnap.exists()) throw "Partner not found";
-               
-               const partnerData = partnerSnap.data() as Partner;
-               const currentBalance = partnerData.balance;
+          const result = await runTransaction(db, async (transaction) => {
+            // 1. Read partner data
+            const partnerRef = doc(db, 'partners', partner.id);
+            const partnerSnap = await transaction.get(partnerRef);
+            if (!partnerSnap.exists()) throw "Partner not found";
+            
+            const partnerData = partnerSnap.data() as Partner;
+            const currentBalance = partnerData.balance;
 
-               // 2. Query available keys inside transaction (safe read)
-               const keysQuery = query(
-                 collection(db, 'keys'),
-                 where('durationDays', '==', durationDays),
-                 where('status', '==', 'unused')
-               );
-               const keysSnap = await getDocs(keysQuery); // getDocs outside transaction is technically required for queries, but we verify below
-               
-               const availableKeys = keysSnap.docs.map(d => d.data() as LicenseKey);
-               if (availableKeys.length === 0) return 'no_stock';
+            // 2. Query available keys inside transaction (safe read)
+            const keysQuery = query(
+              collection(db, 'keys'),
+              where('durationDays', '==', durationDays),
+              where('status', '==', 'unused')
+            );
+            const keysSnap = await getDocs(keysQuery); // getDocs outside transaction is technically required for queries, but we verify below
+            
+            const availableKeys = keysSnap.docs.map(d => d.data() as LicenseKey);
+            if (availableKeys.length === 0) return 'no_stock';
 
-               const affordableQty = Math.floor(currentBalance / unitCost);
-               const actualQty = Math.min(safeQty, availableKeys.length, affordableQty);
+            const affordableQty = Math.floor(currentBalance / unitCost);
+            const actualQty = Math.min(safeQty, availableKeys.length, affordableQty);
 
-               if (actualQty === 0) return 'no_credit';
+            if (actualQty === 0) return 'no_credit';
 
-               const totalCost = unitCost * actualQty;
-               const newBalance = currentBalance - totalCost;
-               
-               if (newBalance < 0) return 'no_credit';
+            const totalCost = unitCost * actualQty;
+            const newBalance = currentBalance - totalCost;
+            
+            if (newBalance < 0) return 'no_credit';
 
-               const keysToRedeem = availableKeys.slice(0, actualQty);
-               const now = Date.now();
+            const keysToRedeem = availableKeys.slice(0, actualQty);
+            const now = Date.now();
 
-               // 3. Write updates
-               transaction.set(partnerRef, { balance: newBalance }, { merge: true });
-               
-               const redeemedKeysList: LicenseKey[] = [];
-               keysToRedeem.forEach(k => {
-                 const keyRef = doc(db, 'keys', k.id);
-                 transaction.set(keyRef, {
-                   status: 'active',
-                   redeemedBy: partner.id,
-                   redeemedAt: now
-                 }, { merge: true });
-                 redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
-               });
+            // 3. Write updates
+            transaction.set(partnerRef, { balance: newBalance }, { merge: true });
+            
+            const redeemedKeysList: LicenseKey[] = [];
+            keysToRedeem.forEach(k => {
+              const keyRef = doc(db, 'keys', k.id);
+              transaction.set(keyRef, {
+                status: 'active',
+                redeemedBy: partner.id,
+                redeemedAt: now
+              }, { merge: true });
+              redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
+            });
 
-               return redeemedKeysList;
-             });
+            return redeemedKeysList;
           });
 
           generateCsrfToken();
