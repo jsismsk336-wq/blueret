@@ -537,7 +537,7 @@ export const useStore = create<AdminState>()(
 
         try {
           const safeQty = Math.max(1, Math.min(50, Math.floor(quantity)));
-          const { currentReseller, partners, packages } = get();
+          const { currentReseller, partners, packages, keys } = get();
           
           if (!currentReseller) return 'no_credit';
 
@@ -549,6 +549,10 @@ export const useStore = create<AdminState>()(
 
           const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
           
+          // Find candidates from local state (avoids composite index requirement)
+          const candidateKeys = keys.filter(k => k.durationDays === durationDays && k.status === 'unused');
+          if (candidateKeys.length === 0) return 'no_stock';
+
           // Use Firestore Transaction to prevent race conditions and pumping
           const result = await runTransaction(db, async (transaction) => {
             // 1. Read partner data
@@ -559,35 +563,42 @@ export const useStore = create<AdminState>()(
             const partnerData = partnerSnap.data() as Partner;
             const currentBalance = partnerData.balance;
 
-            // 2. Query available keys inside transaction (safe read)
-            const keysQuery = query(
-              collection(db, 'keys'),
-              where('durationDays', '==', durationDays),
-              where('status', '==', 'unused')
-            );
-            const keysSnap = await getDocs(keysQuery); // getDocs outside transaction is technically required for queries, but we verify below
-            
-            const availableKeys = keysSnap.docs.map(d => d.data() as LicenseKey);
-            if (availableKeys.length === 0) return 'no_stock';
-
+            // 2. Verify candidate keys are still unused
             const affordableQty = Math.floor(currentBalance / unitCost);
-            const actualQty = Math.min(safeQty, availableKeys.length, affordableQty);
-
-            if (actualQty === 0) return 'no_credit';
-
-            const totalCost = unitCost * actualQty;
-            const newBalance = currentBalance - totalCost;
+            const targetQty = Math.min(safeQty, affordableQty, candidateKeys.length);
             
-            if (newBalance < 0) return 'no_credit';
+            if (targetQty === 0) return 'no_credit';
 
-            const keysToRedeem = availableKeys.slice(0, actualQty);
-            const now = Date.now();
+            const verifiedKeys: LicenseKey[] = [];
+            
+            // Read keys one by one up to targetQty.
+            for (const candidate of candidateKeys) {
+               if (verifiedKeys.length >= targetQty) break;
+               
+               const keyRef = doc(db, 'keys', candidate.id);
+               const keySnap = await transaction.get(keyRef);
+               
+               if (keySnap.exists()) {
+                 const keyData = keySnap.data() as LicenseKey;
+                 if (keyData.status === 'unused') {
+                    verifiedKeys.push(keyData);
+                 }
+               }
+            }
+
+            if (verifiedKeys.length === 0) return 'no_stock_race';
 
             // 3. Write updates
+            const actualQty = verifiedKeys.length;
+            const totalCost = unitCost * actualQty;
+            const newBalance = currentBalance - totalCost;
+
             transaction.set(partnerRef, { balance: newBalance }, { merge: true });
             
+            const now = Date.now();
             const redeemedKeysList: LicenseKey[] = [];
-            keysToRedeem.forEach(k => {
+            
+            verifiedKeys.forEach(k => {
               const keyRef = doc(db, 'keys', k.id);
               transaction.set(keyRef, {
                 status: 'active',
@@ -599,6 +610,8 @@ export const useStore = create<AdminState>()(
 
             return redeemedKeysList;
           });
+
+          if (result === 'no_stock_race') return 'no_stock';
 
           generateCsrfToken();
           return result;
