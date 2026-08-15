@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
-import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key, Webhook, Eye, EyeOff } from 'lucide-react';
+import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key, Webhook, Eye, EyeOff, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../hooks/useTranslation';
 import { useStore } from '../store/useStore';
+import { sendDiscordLog, COLORS } from '../utils/discord';
 
 export function Settings() {
   const { t } = useTranslation();
@@ -104,6 +105,30 @@ export function Settings() {
     setLocalWebhooks(prev => ({ ...prev, [type]: { ...prev[type], enabled: newVal } }));
     updateWebhook(type, { ...localWebhooks[type], enabled: newVal });
     toast.success(newVal ? 'เปิดใช้งาน Webhook แล้ว' : 'ปิดใช้งาน Webhook แล้ว');
+  };
+
+  const handleTestWebhook = async (type: keyof typeof webhooks) => {
+    const url = localWebhooks[type].url;
+    if (!url) {
+      toast.error('กรุณาใส่ Webhook URL ก่อนทดสอบ');
+      return;
+    }
+    
+    toast.loading('กำลังส่งทดสอบ...', { id: 'test-webhook' });
+    const success = await sendDiscordLog(url, {
+      embeds: [{
+        title: "🔔 ทดสอบการเชื่อมต่อ Webhook",
+        description: `ระบบสามารถส่งข้อมูลมายัง Discord ได้สำเร็จ! (${type})`,
+        color: COLORS.INFO,
+        timestamp: new Date().toISOString()
+      }]
+    });
+    
+    if (success) {
+      toast.success('ส่งทดสอบสำเร็จ! เช็คที่ Discord ได้เลย', { id: 'test-webhook' });
+    } else {
+      toast.error('ส่งไม่สำเร็จ! กรุณาตรวจสอบ URL อีกครั้ง', { id: 'test-webhook' });
+    }
   };
 
   return (
@@ -318,6 +343,12 @@ export function Settings() {
                   </button>
                 </div>
                 <button 
+                  onClick={() => handleTestWebhook('adminLogs')}
+                  className="bg-[#2A2E3D] hover:bg-[#34384B] text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Send size={14} /> ทดสอบ
+                </button>
+                <button 
                   onClick={() => handleSaveWebhook('adminLogs')}
                   className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
                 >
@@ -365,6 +396,12 @@ export function Settings() {
                   </button>
                 </div>
                 <button 
+                  onClick={() => handleTestWebhook('resellerLogs')}
+                  className="bg-[#2A2E3D] hover:bg-[#34384B] text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Send size={14} /> ทดสอบ
+                </button>
+                <button 
                   onClick={() => handleSaveWebhook('resellerLogs')}
                   className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
                 >
@@ -411,6 +448,12 @@ export function Settings() {
                     {showWebhookUrl['systemLogs'] ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <button 
+                  onClick={() => handleTestWebhook('systemLogs')}
+                  className="bg-[#2A2E3D] hover:bg-[#34384B] text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Send size={14} /> ทดสอบ
+                </button>
                 <button 
                   onClick={() => handleSaveWebhook('systemLogs')}
                   className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
