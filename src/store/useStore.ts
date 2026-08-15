@@ -4,6 +4,7 @@ import { generateCsrfToken, validateCsrfToken, acquireRedeemLock, releaseRedeemL
 import { doc, getDoc, setDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import CryptoJS from 'crypto-js';
+import { sendDiscordLog, COLORS } from '../utils/discord';
 
 // Secret key for AES encryption (must be complex and hidden)
 // Note: In a pure client-side app, this key is exposed in the source code.
@@ -82,6 +83,17 @@ export interface Announcement {
   createdAt: number;
 }
 
+export interface WebhookConfig {
+  url: string;
+  enabled: boolean;
+}
+
+export interface WebhooksState {
+  adminLogs: WebhookConfig;
+  resellerLogs: WebhookConfig;
+  systemLogs: WebhookConfig;
+}
+
 interface AdminState {
   adminBalance: number;
   globalLogoUrl: string | null;
@@ -92,6 +104,7 @@ interface AdminState {
   packages: Package[];
   resetRequests: ResetRequest[];
   announcements: Announcement[];
+  webhooks: WebhooksState;
   currentAdmin: boolean;
   currentReseller: Partner | null;
 
@@ -103,6 +116,7 @@ interface AdminState {
   // System Settings
   updateGlobalLogo: (base64: string | null) => void;
   updateApiSettings: (endpoint: string, token: string) => void;
+  updateWebhook: (type: keyof WebhooksState, config: WebhookConfig) => void;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -186,6 +200,11 @@ export const useStore = create<AdminState>()(
       packages: [],
       resetRequests: [],
       announcements: [],
+      webhooks: {
+        adminLogs: { url: '', enabled: false },
+        resellerLogs: { url: '', enabled: false },
+        systemLogs: { url: '', enabled: false },
+      },
       currentAdmin: false,
       currentReseller: null,
 
@@ -230,9 +249,16 @@ export const useStore = create<AdminState>()(
         setDoc(doc(db, 'config', 'global'), { apiEndpoint: endpoint, apiToken: token }, { merge: true }).catch(console.error);
       },
 
+      updateWebhook: (type, config) => {
+        const { webhooks } = get();
+        const newWebhooks = { ...webhooks, [type]: config };
+        set({ webhooks: newWebhooks });
+        setDoc(doc(db, 'config', 'webhooks'), newWebhooks, { merge: true }).catch(console.error);
+      },
+
       // ─── PARTNER CRUD ────────────────────────────────────────────────────────
       addPartner: (username, password) => {
-        const { partners } = get();
+        const { partners, webhooks } = get();
         const newPartner: Partner = {
           id: Math.random().toString(36).substring(2, 11),
           username,
@@ -244,16 +270,45 @@ export const useStore = create<AdminState>()(
         };
         set({ partners: [...partners, newPartner] });
         setDoc(doc(db, 'partners', newPartner.id), newPartner);
+
+        if (webhooks.adminLogs?.enabled && webhooks.adminLogs.url) {
+          sendDiscordLog(webhooks.adminLogs.url, {
+            embeds: [{
+              title: "✅ เพิ่มตัวแทนใหม่",
+              description: `เพิ่มตัวแทน **${username}** เข้าสู่ระบบแล้ว`,
+              color: COLORS.SUCCESS,
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
       },
 
       updatePartnerBalance: (id, amount) => {
-        const { partners } = get();
+        const { partners, webhooks } = get();
+        const partner = partners.find(p => p.id === id);
+        if (!partner) return;
+
         set({
           partners: partners.map(p =>
             p.id === id ? { ...p, balance: amount } : p
           )
         });
         setDoc(doc(db, 'partners', id), { balance: amount }, { merge: true });
+
+        if (webhooks.adminLogs?.enabled && webhooks.adminLogs.url && partner.balance !== amount) {
+          sendDiscordLog(webhooks.adminLogs.url, {
+            embeds: [{
+              title: "💰 ปรับเครดิตตัวแทน",
+              description: `ปรับเครดิตตัวแทน **${partner.username}**`,
+              color: COLORS.INFO,
+              fields: [
+                { name: "จากเดิม", value: `${partner.balance}`, inline: true },
+                { name: "ใหม่", value: `${amount}`, inline: true }
+              ],
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
       },
 
       updatePartnerPassword: (id, newPassword) => {
@@ -297,7 +352,7 @@ export const useStore = create<AdminState>()(
 
       // ─── KEY MANAGEMENT ──────────────────────────────────────────────────────
       generateKey: (durationDays, cost, creator, amount = 1) => {
-        const { adminBalance, keys } = get();
+        const { adminBalance, keys, webhooks } = get();
         const totalCost = cost * amount;
 
         if (adminBalance < totalCost) return false;
@@ -326,6 +381,21 @@ export const useStore = create<AdminState>()(
           batch.set(doc(db, 'keys', k.id), k);
         });
         batch.commit();
+
+        if (webhooks.adminLogs?.enabled && webhooks.adminLogs.url) {
+          sendDiscordLog(webhooks.adminLogs.url, {
+            embeds: [{
+              title: "🔑 สร้างคีย์ใหม่",
+              description: `สร้างคีย์อายุ **${durationDays} วัน** จำนวน **${amount} คีย์**`,
+              color: COLORS.SUCCESS,
+              fields: [
+                { name: "ผู้สร้าง", value: creator, inline: true },
+                { name: "เครดิตรวมที่หัก", value: `${totalCost}`, inline: true }
+              ],
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
 
         return true;
       },
@@ -391,7 +461,7 @@ export const useStore = create<AdminState>()(
 
       // ─── RESET REQUESTS MANAGEMENT ───────────────────────────────────────────
       requestReset: (keyId, keyString) => {
-        const { currentReseller, resetRequests } = get();
+        const { currentReseller, resetRequests, webhooks } = get();
         if (!currentReseller) return;
         
         if (resetRequests.some(r => r.keyId === keyId && r.status === 'pending')) {
@@ -410,6 +480,20 @@ export const useStore = create<AdminState>()(
 
         set({ resetRequests: [newRequest, ...resetRequests] });
         setDoc(doc(db, 'resetRequests', newRequest.id), newRequest);
+
+        if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
+          sendDiscordLog(webhooks.resellerLogs.url, {
+            embeds: [{
+              title: "🔄 ส่งคำขอรีเซ็ตคีย์ (HWID)",
+              description: `ตัวแทน **${currentReseller.username}** ได้ส่งคำขอรีเซ็ตคีย์`,
+              color: COLORS.WARNING,
+              fields: [
+                { name: "คีย์", value: `\`${keyString}\``, inline: false }
+              ],
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
       },
 
       approveReset: (requestId) => {
@@ -613,6 +697,26 @@ export const useStore = create<AdminState>()(
 
           if (result === 'no_stock_race') return 'no_stock';
 
+          if (Array.isArray(result) && result.length > 0) {
+            const { webhooks } = get();
+            if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
+              const actualQty = result.length;
+              sendDiscordLog(webhooks.resellerLogs.url, {
+                embeds: [{
+                  title: "🛒 ดึงคีย์สำเร็จ",
+                  description: `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่`,
+                  color: COLORS.SUCCESS,
+                  fields: [
+                    { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },
+                    { name: "จำนวน", value: `${actualQty} คีย์`, inline: true },
+                    { name: "เครดิตที่ใช้", value: `${unitCost * actualQty}`, inline: true }
+                  ],
+                  timestamp: new Date().toISOString()
+                }]
+              });
+            }
+          }
+
           generateCsrfToken();
           return result;
         } catch (error) {
@@ -658,6 +762,12 @@ export async function initFirebaseSync() {
       batch.set(doc(db, 'packages', p.days.toString()), p);
     });
     
+    batch.set(doc(db, 'config', 'webhooks'), {
+      adminLogs: { url: '', enabled: false },
+      resellerLogs: { url: '', enabled: false },
+      systemLogs: { url: '', enabled: false }
+    });
+    
     await batch.commit();
   }
 
@@ -670,6 +780,13 @@ export async function initFirebaseSync() {
         apiEndpoint: data.apiEndpoint || "",
         apiToken: data.apiToken || ""
       });
+    }
+  });
+
+  onSnapshot(doc(db, 'config', 'webhooks'), (docSnap: any) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data() as WebhooksState;
+      useStore.setState({ webhooks: data });
     }
   });
 

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key } from 'lucide-react';
+import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key, Webhook, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../hooks/useTranslation';
@@ -11,12 +11,15 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const { globalLogoUrl, updateGlobalLogo, apiEndpoint, apiToken, updateApiSettings } = useStore();
+  const { globalLogoUrl, updateGlobalLogo, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook } = useStore();
   const [logoPreview, setLogoPreview] = useState<string | null>(globalLogoUrl);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localApiEndpoint, setLocalApiEndpoint] = useState(apiEndpoint || '');
   const [localApiToken, setLocalApiToken] = useState(apiToken || '');
+
+  const [localWebhooks, setLocalWebhooks] = useState(webhooks);
+  const [showWebhookUrl, setShowWebhookUrl] = useState<Record<string, boolean>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +92,18 @@ export function Settings() {
   const handleSaveApi = () => {
     updateApiSettings(localApiEndpoint, localApiToken);
     toast.success('บันทึกการตั้งค่า API สำเร็จ');
+  };
+
+  const handleSaveWebhook = (type: keyof typeof webhooks) => {
+    updateWebhook(type, localWebhooks[type]);
+    toast.success('บันทึก Webhook เรียบร้อยแล้ว');
+  };
+
+  const handleToggleWebhook = (type: keyof typeof webhooks) => {
+    const newVal = !localWebhooks[type].enabled;
+    setLocalWebhooks(prev => ({ ...prev, [type]: { ...prev[type], enabled: newVal } }));
+    updateWebhook(type, { ...localWebhooks[type], enabled: newVal });
+    toast.success(newVal ? 'เปิดใช้งาน Webhook แล้ว' : 'ปิดใช้งาน Webhook แล้ว');
   };
 
   return (
@@ -253,6 +268,157 @@ export function Settings() {
               <Save size={18} />
               บันทึกการตั้งค่า API
             </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Discord Webhooks Settings */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-[#161925] border border-gray-800/60 rounded-2xl p-6 max-w-xl mt-8 mb-16">
+        <div className="flex items-center gap-2 text-white font-medium mb-6">
+          <Webhook size={18} className="text-indigo-400" />
+          <span>ตั้งค่า Discord Webhooks</span>
+        </div>
+        
+        <div className="space-y-8">
+          {/* Admin Logs */}
+          <div className="bg-[#0F111A] border border-gray-800/60 rounded-xl p-5 relative overflow-hidden">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  1. Admin Logs
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">ส่ง log ทุกการกระทำของแอดมินจากหลังบ้าน (แก้ไขสินค้า, เติมพอยท์, จัดการผู้ใช้)</p>
+              </div>
+              <button 
+                onClick={() => handleToggleWebhook('adminLogs')}
+                className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${localWebhooks.adminLogs.enabled ? 'bg-green-500' : 'bg-gray-700'}`}
+              >
+                <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${localWebhooks.adminLogs.enabled ? 'translate-x-5' : 'translate-x-1'}`}></div>
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-medium text-gray-400">Discord Webhook URL</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input 
+                    type={showWebhookUrl['adminLogs'] ? 'text' : 'password'}
+                    value={localWebhooks.adminLogs.url}
+                    onChange={(e) => setLocalWebhooks(prev => ({ ...prev, adminLogs: { ...prev.adminLogs, url: e.target.value } }))}
+                    placeholder="https://discord.com/api/webhooks/..." 
+                    className="w-full bg-[#161925] border border-gray-700/60 rounded-lg pl-3 pr-10 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowWebhookUrl(prev => ({ ...prev, adminLogs: !prev.adminLogs }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                  >
+                    {showWebhookUrl['adminLogs'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <button 
+                  onClick={() => handleSaveWebhook('adminLogs')}
+                  className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Save size={14} /> บันทึก
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Reseller Logs */}
+          <div className="bg-[#0F111A] border border-gray-800/60 rounded-xl p-5 relative overflow-hidden">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  2. Reseller Logs
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">ส่ง log เมื่อตัวแทนทำการดึงคีย์ หรือส่งคำขอรีเซ็ต HWID</p>
+              </div>
+              <button 
+                onClick={() => handleToggleWebhook('resellerLogs')}
+                className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${localWebhooks.resellerLogs.enabled ? 'bg-green-500' : 'bg-gray-700'}`}
+              >
+                <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${localWebhooks.resellerLogs.enabled ? 'translate-x-5' : 'translate-x-1'}`}></div>
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-medium text-gray-400">Discord Webhook URL</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input 
+                    type={showWebhookUrl['resellerLogs'] ? 'text' : 'password'}
+                    value={localWebhooks.resellerLogs.url}
+                    onChange={(e) => setLocalWebhooks(prev => ({ ...prev, resellerLogs: { ...prev.resellerLogs, url: e.target.value } }))}
+                    placeholder="https://discord.com/api/webhooks/..." 
+                    className="w-full bg-[#161925] border border-gray-700/60 rounded-lg pl-3 pr-10 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowWebhookUrl(prev => ({ ...prev, resellerLogs: !prev.resellerLogs }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                  >
+                    {showWebhookUrl['resellerLogs'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <button 
+                  onClick={() => handleSaveWebhook('resellerLogs')}
+                  className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Save size={14} /> บันทึก
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* System Logs */}
+          <div className="bg-[#0F111A] border border-gray-800/60 rounded-xl p-5 relative overflow-hidden">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  3. System Logs
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">ส่ง log การเข้าสู่ระบบ (Login) หรือความปลอดภัยอื่นๆ</p>
+              </div>
+              <button 
+                onClick={() => handleToggleWebhook('systemLogs')}
+                className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${localWebhooks.systemLogs.enabled ? 'bg-green-500' : 'bg-gray-700'}`}
+              >
+                <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${localWebhooks.systemLogs.enabled ? 'translate-x-5' : 'translate-x-1'}`}></div>
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-medium text-gray-400">Discord Webhook URL</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input 
+                    type={showWebhookUrl['systemLogs'] ? 'text' : 'password'}
+                    value={localWebhooks.systemLogs.url}
+                    onChange={(e) => setLocalWebhooks(prev => ({ ...prev, systemLogs: { ...prev.systemLogs, url: e.target.value } }))}
+                    placeholder="https://discord.com/api/webhooks/..." 
+                    className="w-full bg-[#161925] border border-gray-700/60 rounded-lg pl-3 pr-10 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowWebhookUrl(prev => ({ ...prev, systemLogs: !prev.systemLogs }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                  >
+                    {showWebhookUrl['systemLogs'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <button 
+                  onClick={() => handleSaveWebhook('systemLogs')}
+                  className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium px-4 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Save size={14} /> บันทึก
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>
