@@ -651,63 +651,122 @@ export const useStore = create<AdminState>()(
           const candidateKeys = keys.filter(k => k.durationDays === durationDays && k.status === 'unused');
           if (candidateKeys.length === 0) return 'no_stock';
 
-          // Use Firestore Transaction to prevent race conditions and pumping
-          const result = await runTransaction(db, async (transaction) => {
-            // 1. Read partner data
-            const partnerRef = doc(db, 'partners', partner.id);
-            const partnerSnap = await transaction.get(partnerRef);
-            if (!partnerSnap.exists()) throw "Partner not found";
-            
-            const partnerData = partnerSnap.data() as Partner;
-            const currentBalance = partnerData.balance;
+          const affordableQty = Math.floor(partner.balance / unitCost);
+          const targetQty = Math.min(safeQty, affordableQty, candidateKeys.length);
+          if (targetQty === 0) return 'no_credit';
 
-            // 2. Verify candidate keys are still unused
-            const affordableQty = Math.floor(currentBalance / unitCost);
-            const targetQty = Math.min(safeQty, affordableQty, candidateKeys.length);
-            
-            if (targetQty === 0) return 'no_credit';
+          let result;
+          try {
+            // Use Firestore Transaction to prevent race conditions and pumping
+            result = await runTransaction(db, async (transaction) => {
+              // 1. Read partner data
+              const partnerRef = doc(db, 'partners', partner.id);
+              const partnerSnap = await transaction.get(partnerRef);
+              if (!partnerSnap.exists()) throw "Partner not found";
+              
+              const partnerData = partnerSnap.data() as Partner;
+              const currentBalance = partnerData.balance;
 
-            const verifiedKeys: LicenseKey[] = [];
-            
-            // Read keys one by one up to targetQty.
-            for (const candidate of candidateKeys) {
-               if (verifiedKeys.length >= targetQty) break;
-               
-               const keyRef = doc(db, 'keys', candidate.id);
-               const keySnap = await transaction.get(keyRef);
-               
-               if (keySnap.exists()) {
-                 const keyData = keySnap.data() as LicenseKey;
-                 if (keyData.status === 'unused') {
-                    verifiedKeys.push(keyData);
+              // 2. Verify candidate keys are still unused
+              const currentAffordableQty = Math.floor(currentBalance / unitCost);
+              const currentTargetQty = Math.min(safeQty, currentAffordableQty, candidateKeys.length);
+              
+              if (currentTargetQty === 0) return 'no_credit';
+
+              const verifiedKeys: LicenseKey[] = [];
+              
+              // Read keys one by one up to currentTargetQty.
+              for (const candidate of candidateKeys) {
+                 if (verifiedKeys.length >= currentTargetQty) break;
+                 
+                 const keyRef = doc(db, 'keys', candidate.id);
+                 const keySnap = await transaction.get(keyRef);
+                 
+                 if (keySnap.exists()) {
+                   const keyData = keySnap.data() as LicenseKey;
+                   if (keyData.status === 'unused') {
+                      verifiedKeys.push(keyData);
+                   }
                  }
-               }
-            }
+              }
 
-            if (verifiedKeys.length === 0) return 'no_stock_race';
+              if (verifiedKeys.length === 0) return 'no_stock_race';
 
-            // 3. Write updates
-            const actualQty = verifiedKeys.length;
-            const totalCost = unitCost * actualQty;
-            const newBalance = currentBalance - totalCost;
+              // 3. Write updates
+              const actualQty = verifiedKeys.length;
+              const totalCost = unitCost * actualQty;
+              const newBalance = currentBalance - totalCost;
 
-            transaction.set(partnerRef, { balance: newBalance }, { merge: true });
-            
-            const now = Date.now();
-            const redeemedKeysList: LicenseKey[] = [];
-            
-            verifiedKeys.forEach(k => {
-              const keyRef = doc(db, 'keys', k.id);
-              transaction.set(keyRef, {
-                status: 'active',
-                redeemedBy: partner.id,
-                redeemedAt: now
-              }, { merge: true });
-              redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
+              transaction.set(partnerRef, { balance: newBalance }, { merge: true });
+              
+              const now = Date.now();
+              const redeemedKeysList: LicenseKey[] = [];
+              
+              verifiedKeys.forEach(k => {
+                const keyRef = doc(db, 'keys', k.id);
+                transaction.set(keyRef, {
+                  status: 'active',
+                  redeemedBy: partner.id,
+                  redeemedAt: now
+                }, { merge: true });
+                redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
+              });
+
+              return redeemedKeysList;
             });
+          } catch (error: any) {
+            console.error("Transaction failed: ", error);
+            
+            // Fallback: Non-transactional batch update
+            try {
+              const verifiedKeys: LicenseKey[] = [];
+              for (const candidate of candidateKeys) {
+                if (verifiedKeys.length >= targetQty) break;
+                const keyRef = doc(db, 'keys', candidate.id);
+                const keySnap = await getDoc(keyRef);
+                if (keySnap.exists()) {
+                  const keyData = keySnap.data() as LicenseKey;
+                  if (keyData.status === 'unused') {
+                    verifiedKeys.push(keyData);
+                  }
+                }
+              }
 
-            return redeemedKeysList;
-          });
+              if (verifiedKeys.length === 0) return 'no_stock_race';
+
+              const actualQty = verifiedKeys.length;
+              const totalCost = unitCost * actualQty;
+
+              const partnerRef = doc(db, 'partners', partner.id);
+              const partnerSnap = await getDoc(partnerRef);
+              if (!partnerSnap.exists()) return 'locked';
+              
+              const pData = partnerSnap.data() as Partner;
+              if (pData.balance < totalCost) return 'no_credit';
+
+              const batch = writeBatch(db);
+              batch.set(partnerRef, { balance: pData.balance - totalCost }, { merge: true });
+
+              const now = Date.now();
+              const redeemedKeysList: LicenseKey[] = [];
+
+              verifiedKeys.forEach(k => {
+                const keyRef = doc(db, 'keys', k.id);
+                batch.set(keyRef, {
+                  status: 'active',
+                  redeemedBy: partner.id,
+                  redeemedAt: now
+                }, { merge: true });
+                redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
+              });
+
+              await batch.commit();
+              result = redeemedKeysList;
+            } catch (fallbackError: any) {
+              console.error("Fallback failed: ", fallbackError);
+              return `transaction_error:${fallbackError?.message || 'unknown'}`;
+            }
+          }
 
           if (result === 'no_stock_race') return 'no_stock';
 
@@ -733,9 +792,9 @@ export const useStore = create<AdminState>()(
 
           generateCsrfToken();
           return result;
-        } catch (error) {
-          console.error("Transaction failed: ", error);
-          return 'locked'; // fallback error
+        } catch (error: any) {
+          console.error("Main block failed: ", error);
+          return `transaction_error:${error?.message || 'unknown'}`;
         } finally {
           releaseRedeemLock();
         }

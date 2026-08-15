@@ -181,6 +181,8 @@ export function ResellerDashboard() {
       toast.error(t('reseller.securityError'));
     } else if (result === 'locked') {
       toast.error(t('reseller.processing'));
+    } else if (typeof result === 'string' && result.startsWith('transaction_error:')) {
+      toast.error(`ระบบขัดข้อง: ${result.split(':')[1]}`);
     } else if (Array.isArray(result)) {
       if (result.length < qty) {
         toast(t('reseller.partialKeys', { received: result.length, requested: qty }), { icon: '⚠️' });
