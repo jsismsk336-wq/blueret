@@ -401,7 +401,7 @@ export const useStore = create<AdminState>()(
       },
 
       importKeys: (durationDays, importedKeys, creator) => {
-        const { keys } = get();
+        const { keys, webhooks } = get();
         const newKeys: LicenseKey[] = importedKeys.map(keyString => ({
           id: generateRandomString(8),
           keyString,
@@ -421,6 +421,20 @@ export const useStore = create<AdminState>()(
           batch.set(doc(db, 'keys', k.id), k);
         });
         batch.commit();
+
+        if (webhooks.adminLogs?.enabled && webhooks.adminLogs.url) {
+          sendDiscordLog(webhooks.adminLogs.url, {
+            embeds: [{
+              title: "📥 นำเข้าคีย์สำเร็จ",
+              description: `นำเข้าคีย์อายุ **${durationDays} วัน** จำนวน **${importedKeys.length} คีย์**`,
+              color: COLORS.INFO,
+              fields: [
+                { name: "ผู้ทำรายการ", value: creator, inline: true }
+              ],
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
       },
 
       resetHwid: (id) => {
