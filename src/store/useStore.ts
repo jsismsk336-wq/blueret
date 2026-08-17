@@ -99,6 +99,7 @@ interface AdminState {
   globalLogoUrl: string | null;
   apiEndpoint: string | null;
   apiToken: string | null;
+  adminPasswordHash: string | null;
   partners: Partner[];
   keys: LicenseKey[];
   packages: Package[];
@@ -117,6 +118,7 @@ interface AdminState {
   updateGlobalLogo: (base64: string | null) => void;
   updateApiSettings: (endpoint: string, token: string) => void;
   updateWebhook: (type: keyof WebhooksState, config: WebhookConfig) => void;
+  updateAdminPassword: (currentPass: string, newPass: string) => boolean;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -195,6 +197,7 @@ export const useStore = create<AdminState>()(
       globalLogoUrl: null,
       apiEndpoint: "",
       apiToken: "",
+      adminPasswordHash: null,
       partners: [],
       keys: [],
       packages: [],
@@ -210,11 +213,25 @@ export const useStore = create<AdminState>()(
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
-        if (username === 'admin' && password === 'admin1234') {
-          set({ currentAdmin: true });
-          generateCsrfToken();
-          return 'admin';
+        if (username === 'admin') {
+          const { adminPasswordHash } = get();
+          const inputHash = CryptoJS.SHA256(password).toString();
+          
+          if (adminPasswordHash) {
+            if (inputHash === adminPasswordHash) {
+              set({ currentAdmin: true });
+              generateCsrfToken();
+              return 'admin';
+            }
+          } else {
+            if (password === 'admin1234') {
+              set({ currentAdmin: true });
+              generateCsrfToken();
+              return 'admin';
+            }
+          }
         }
+        
         const { partners } = get();
         const safeUser = username.trim().toLowerCase();
         const safePass = password.trim();
@@ -254,6 +271,33 @@ export const useStore = create<AdminState>()(
         const newWebhooks = { ...webhooks, [type]: config };
         set({ webhooks: newWebhooks });
         setDoc(doc(db, 'config', 'webhooks'), newWebhooks, { merge: true }).catch(console.error);
+      },
+
+      updateAdminPassword: (currentPass, newPass) => {
+        const { adminPasswordHash, webhooks } = get();
+        const currentInputHash = CryptoJS.SHA256(currentPass).toString();
+        
+        if (adminPasswordHash) {
+          if (currentInputHash !== adminPasswordHash) return false;
+        } else {
+          if (currentPass !== 'admin1234') return false;
+        }
+
+        const newHash = CryptoJS.SHA256(newPass).toString();
+        set({ adminPasswordHash: newHash });
+        setDoc(doc(db, 'config', 'global'), { adminPasswordHash: newHash }, { merge: true }).catch(console.error);
+        
+        if (webhooks.adminLogs?.enabled && webhooks.adminLogs.url) {
+          sendDiscordLog(webhooks.adminLogs.url, {
+            embeds: [{
+              title: "🔐 เปลี่ยนรหัสผ่านหลักสำเร็จ",
+              description: `รหัสผ่านเข้าหลังบ้านของแอดมินถูกเปลี่ยนแปลงเรียบร้อยแล้ว`,
+              color: COLORS.WARNING,
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
+        return true;
       },
 
       // ─── PARTNER CRUD ────────────────────────────────────────────────────────
@@ -851,7 +895,8 @@ export async function initFirebaseSync() {
         adminBalance: data.adminBalance,
         globalLogoUrl: data.logoUrl || null,
         apiEndpoint: data.apiEndpoint || "",
-        apiToken: data.apiToken || ""
+        apiToken: data.apiToken || "",
+        adminPasswordHash: data.adminPasswordHash || null
       });
     }
   });

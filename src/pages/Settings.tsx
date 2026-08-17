@@ -12,7 +12,7 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const { globalLogoUrl, updateGlobalLogo, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook } = useStore();
+  const { globalLogoUrl, updateGlobalLogo, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword } = useStore();
   const [logoPreview, setLogoPreview] = useState<string | null>(globalLogoUrl);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,10 +28,17 @@ export function Settings() {
       toast.error(t('admin.passwordMismatch'));
       return;
     }
-    toast.success(t('admin.passwordChangedSuccess'));
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    
+    const success = updateAdminPassword(currentPassword, newPassword);
+    
+    if (success) {
+      toast.success(t('admin.passwordChangedSuccess'));
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      toast.error('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
