@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, getDoc, writeBatch } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, writeBatch, runTransaction } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZ8diiXPpwWbaL1vwpoLtCvub--jvPIQ0",
@@ -90,44 +90,67 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ status: 'error', message: 'Insufficient balance or stock' });
     }
 
-    // 4. Batch update
-    const verifiedKeys = candidateKeys.slice(0, targetQty);
-    const totalCost = unitCost * targetQty;
-
-    // Double check balance (Anti race condition)
+    // 4. Transaction update (Bullet-proof Anti-Race Condition)
     const pRef = doc(db, 'partners', partnerId);
-    const pSnap = await getDoc(pRef);
-    if (!pSnap.exists() || (pSnap.data() as any).balance < totalCost) {
-       return res.status(400).json({ status: 'error', message: 'Insufficient balance (Race Condition Prevented)' });
-    }
+    let redeemedKeys: string[] = [];
+    let remainingBalance = 0;
 
-    const batch = writeBatch(db);
-    batch.set(pRef, { balance: (pSnap.data() as any).balance - totalCost }, { merge: true });
+    await runTransaction(db, async (transaction) => {
+      // Re-read partner balance inside transaction
+      const pSnap = await transaction.get(pRef);
+      if (!pSnap.exists()) throw new Error("Partner not found");
+      
+      const currentBalance = (pSnap.data() as any).balance;
+      
+      // Re-read keys inside transaction to ensure they haven't been taken
+      const verifiedKeys: any[] = [];
+      for (const candidate of candidateKeys) {
+        if (verifiedKeys.length >= targetQty) break;
+        const keyRef = doc(db, 'keys', candidate.id);
+        const kSnap = await transaction.get(keyRef);
+        if (kSnap.exists() && (kSnap.data() as any).status === 'unused') {
+          verifiedKeys.push({ id: candidate.id, keyString: (kSnap.data() as any).keyString });
+        }
+      }
 
-    const now = Date.now();
-    const redeemedKeys: string[] = [];
+      if (verifiedKeys.length === 0) {
+        throw new Error("No keys available in stock (Race Condition Prevented)");
+      }
 
-    for (const k of verifiedKeys) {
-      const keyRef = doc(db, 'keys', k.id);
-      batch.set(keyRef, {
-        status: 'active',
-        redeemedBy: partnerId,
-        redeemedAt: now
-      }, { merge: true });
-      redeemedKeys.push(k.keyString);
-    }
+      const actualQty = verifiedKeys.length;
+      const totalCost = unitCost * actualQty;
 
-    await batch.commit();
+      if (currentBalance < totalCost) {
+        throw new Error("Insufficient balance");
+      }
+
+      const newBalance = currentBalance - totalCost;
+      remainingBalance = newBalance;
+      transaction.set(pRef, { balance: newBalance }, { merge: true });
+
+      const now = Date.now();
+      for (const k of verifiedKeys) {
+        const keyRef = doc(db, 'keys', k.id);
+        transaction.set(keyRef, {
+          status: 'active',
+          redeemedBy: partnerId,
+          redeemedAt: now
+        }, { merge: true });
+        redeemedKeys.push(k.keyString);
+      }
+    });
 
     return res.status(200).json({
       status: 'success',
       keys: redeemedKeys,
-      message: `Successfully pulled ${targetQty} key(s)`,
-      remaining_balance: (pSnap.data() as any).balance - totalCost
+      message: `Successfully pulled ${redeemedKeys.length} key(s)`,
+      remaining_balance: remainingBalance
     });
 
   } catch (error: any) {
     console.error(error);
-    return res.status(500).json({ status: 'error', message: 'Internal server error: ' + error.message });
+    const msg = error.message || 'Internal server error';
+    const statusCode = msg.includes("Insufficient balance") || msg.includes("No keys") ? 400 : 500;
+    return res.status(statusCode).json({ status: 'error', message: msg });
   }
 }
