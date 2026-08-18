@@ -398,10 +398,17 @@ export function ResellerDashboard() {
         </div>
         
         <div className="bg-[#161925] rounded-2xl p-5 border border-gray-800/50">
-           <div className="text-xs text-gray-400 mb-3 font-medium">ตัวอย่างการเรียกใช้งาน (Endpoint URL)</div>
-           <code className="text-[13px] text-green-400 font-mono break-all block bg-[#0F111A] p-4 rounded-xl border border-gray-800">
-             GET /api/pull?token={partner.apiToken || 'YOUR_TOKEN'}&days=30&qty=1
-           </code>
+           <div className="text-xs text-gray-400 mb-3 font-medium">ตัวอย่างการเรียกใช้งาน (Endpoint URL) แยกตามแพ็กเกจ</div>
+           <div className="space-y-3">
+             {packages.map(pkg => (
+               <div key={pkg.days} className="bg-[#0F111A] p-3 rounded-xl border border-gray-800">
+                 <div className="text-xs text-purple-400 mb-1.5 font-bold">▶ ลิงก์ดึงคีย์ {pkg.label}</div>
+                 <code className="text-[12px] text-green-400 font-mono break-all block select-all">
+                   GET /api/pull?token={partner.apiToken || 'YOUR_TOKEN'}&days={pkg.days}&qty=1
+                 </code>
+               </div>
+             ))}
+           </div>
         </div>
       </motion.div>
 
