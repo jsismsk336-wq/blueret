@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, getDoc, writeBatch, runTransaction } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, writeBatch, runTransaction, query, where, limit } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZ8diiXPpwWbaL1vwpoLtCvub--jvPIQ0",
@@ -69,14 +69,21 @@ export default async function handler(req: any, res: any) {
     const pkg = pkgSnap.data();
     const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
     
-    // 3. Find available keys in stock
-    const keysSnap = await getDocs(collection(db, 'keys'));
+    // 3. Find available keys in stock (Using query limit to prevent quota exhaustion)
+    const affordableQty = Math.floor(partner.balance / unitCost);
+    const maxPossibleQty = Math.min(quantity, affordableQty);
+    
+    if (maxPossibleQty <= 0) {
+      return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
+    }
+
+    const keysRef = collection(db, 'keys');
+    const q = query(keysRef, where('durationDays', '==', durationDays), where('status', '==', 'unused'), limit(maxPossibleQty + 5));
+    const keysSnap = await getDocs(q);
+    
     const candidateKeys: any[] = [];
     keysSnap.forEach(d => {
-      const k = d.data();
-      if (k.durationDays === durationDays && k.status === 'unused') {
-        candidateKeys.push({ id: d.id, ...k });
-      }
+      candidateKeys.push({ id: d.id, ...d.data() });
     });
 
     if (candidateKeys.length === 0) {

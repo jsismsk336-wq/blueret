@@ -404,7 +404,7 @@ export function ResellerDashboard() {
                <div key={pkg.days} className="bg-[#0F111A] p-3 rounded-xl border border-gray-800">
                  <div className="text-xs text-purple-400 mb-1.5 font-bold">▶ ลิงก์ดึงคีย์ {pkg.label}</div>
                  <code className="text-[12px] text-green-400 font-mono break-all block select-all">
-                   GET /api/pull?token={partner.apiToken || 'YOUR_TOKEN'}&days={pkg.days}&qty=1
+                   GET {typeof window !== 'undefined' ? window.location.origin : ''}/api/pull?token={partner.apiToken || 'YOUR_TOKEN'}&days={pkg.days}&qty=1
                  </code>
                </div>
              ))}
