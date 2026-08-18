@@ -115,6 +115,17 @@ export function Partners() {
                       </button>
                       <button 
                         onClick={() => {
+                          if(window.confirm('ยืนยันการรีเซ็ต API Token สำหรับตัวแทนนี้? Token เดิมจะไม่สามารถใช้งานได้อีกต่อไป')) {
+                             useStore.getState().resetPartnerApiToken(partner.id);
+                             toast.success('รีเซ็ต API Token เรียบร้อยแล้ว');
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg border border-teal-500/20 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 transition-all text-xs font-medium"
+                      >
+                        Reset API
+                      </button>
+                      <button 
+                        onClick={() => {
                           togglePartnerStatus(partner.id);
                           toast.success(partner.status === 'active' ? t('admin.suspendSuccess') : t('admin.unsuspendSuccess'));
                         }}

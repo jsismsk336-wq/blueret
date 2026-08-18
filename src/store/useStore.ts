@@ -41,6 +41,7 @@ export interface Partner {
   balance: number;
   status: 'active' | 'suspended';
   customPrices?: Record<number, number>;
+  apiToken?: string;
 }
 
 export interface LicenseKey {
@@ -127,6 +128,7 @@ interface AdminState {
   togglePartnerStatus: (id: string) => void;
   deletePartner: (id: string) => void;
   updatePartnerCustomPrices: (id: string, customPrices: Record<number, number>) => void;
+  resetPartnerApiToken: (id: string) => void;
 
   // Key management (admin)
   generateKey: (durationDays: number, cost: number, creator: string, amount?: number) => boolean;
@@ -311,6 +313,7 @@ export const useStore = create<AdminState>()(
           balance: 0,
           status: 'active',
           customPrices: {},
+          apiToken: 'sk_live_' + generateRandomString(24),
         };
         set({ partners: [...partners, newPartner] });
         setDoc(doc(db, 'partners', newPartner.id), newPartner);
@@ -392,6 +395,17 @@ export const useStore = create<AdminState>()(
           )
         });
         setDoc(doc(db, 'partners', id), { customPrices }, { merge: true });
+      },
+
+      resetPartnerApiToken: (id) => {
+        const { partners } = get();
+        const newToken = 'sk_live_' + generateRandomString(24);
+        set({
+          partners: partners.map(p =>
+            p.id === id ? { ...p, apiToken: newToken } : p
+          )
+        });
+        setDoc(doc(db, 'partners', id), { apiToken: newToken }, { merge: true });
       },
 
       // ─── KEY MANAGEMENT ──────────────────────────────────────────────────────

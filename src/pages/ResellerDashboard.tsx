@@ -358,6 +358,53 @@ export function ResellerDashboard() {
         })}
       </div>
 
+      {/* API Token Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-gradient-to-br from-[#1c2135] via-[#12141D] to-[#0a0c13] border border-blue-500/20 rounded-3xl p-8 mt-10 relative overflow-hidden z-10 shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2.5 bg-purple-500/10 border border-purple-500/20 rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+            <KeyRound size={22} className="text-purple-400" />
+          </div>
+          <h2 className="text-xl font-bold text-white tracking-tight">API ดึงคีย์อัตโนมัติ (สำหรับร้านค้า/Bot)</h2>
+        </div>
+        
+        <p className="text-gray-400 text-sm mb-6 max-w-2xl">
+          ใช้ API Token นี้นำไปเชื่อมกับระบบอัตโนมัติของตัวแทน (เช่น Discord Bot หรือ เว็บขายคีย์) 
+          ระบบจะหักเครดิตตามจริง (รองรับราคาส่ง) และไม่อนุญาตให้ดึงถ้าไม่มีของในสต็อก
+        </p>
+        
+        <div className="bg-[#0B0D14]/80 rounded-2xl p-5 border border-gray-800/50 relative mb-6">
+          <div className="text-xs text-gray-500 mb-2 font-medium">API TOKEN ของคุณ (ห้ามให้ใครเด็ดขาด)</div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="font-mono text-purple-300 text-sm tracking-wide bg-[#161925] px-4 py-3 rounded-xl border border-gray-800 flex-1 overflow-x-auto whitespace-nowrap">
+              {partner.apiToken || 'ยังไม่มี API Token (ติดต่อแอดมินให้รีเซ็ตให้ 1 ครั้ง)'}
+            </div>
+            {partner.apiToken && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(partner.apiToken || '');
+                  toast.success('คัดลอก API Token แล้ว');
+                }}
+                className="shrink-0 flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-medium transition-all text-sm bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
+              >
+                <Copy size={16} /> คัดลอก
+              </button>
+            )}
+          </div>
+        </div>
+        
+        <div className="bg-[#161925] rounded-2xl p-5 border border-gray-800/50">
+           <div className="text-xs text-gray-400 mb-3 font-medium">ตัวอย่างการเรียกใช้งาน (Endpoint URL)</div>
+           <code className="text-[13px] text-green-400 font-mono break-all block bg-[#0F111A] p-4 rounded-xl border border-gray-800">
+             GET /api/pull?token={partner.apiToken || 'YOUR_TOKEN'}&days=30&qty=1
+           </code>
+        </div>
+      </motion.div>
+
       {resultKeys && (
         <KeyResultModal keys={resultKeys} onClose={() => setResultKeys(null)} />
       )}
