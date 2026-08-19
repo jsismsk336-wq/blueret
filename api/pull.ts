@@ -90,8 +90,7 @@ export default async function handler(req: any, res: any) {
       return res.status(404).json({ status: 'error', message: 'No keys in stock' });
     }
 
-    const affordableQty = Math.floor(partner.balance / unitCost);
-    const targetQty = Math.min(quantity, affordableQty, candidateKeys.length);
+    const targetQty = Math.min(maxPossibleQty, candidateKeys.length);
 
     if (targetQty <= 0) {
       return res.status(400).json({ status: 'error', message: 'Insufficient balance or stock' });
