@@ -26,6 +26,12 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    // Check maintenance mode
+    const globalDoc = await getDoc(doc(db, 'config', 'global'));
+    if (globalDoc.exists() && globalDoc.data().maintenanceMode === true) {
+      return res.status(503).json({ status: 'error', message: 'ระบบกำลังปิดปรับปรุงชั่วคราว (System Under Maintenance)' });
+    }
+
     const { token, days, qty } = req.method === 'POST' ? req.body : req.query;
 
     if (!token || !days) {

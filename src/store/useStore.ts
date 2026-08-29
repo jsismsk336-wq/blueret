@@ -109,6 +109,7 @@ interface AdminState {
   webhooks: WebhooksState;
   currentAdmin: boolean;
   currentReseller: Partner | null;
+  maintenanceMode: boolean;
 
   // Auth
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
@@ -120,6 +121,7 @@ interface AdminState {
   updateApiSettings: (endpoint: string, token: string) => void;
   updateWebhook: (type: keyof WebhooksState, config: WebhookConfig) => void;
   updateAdminPassword: (currentPass: string, newPass: string) => boolean;
+  toggleMaintenance: (password: string) => boolean;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -212,6 +214,7 @@ export const useStore = create<AdminState>()(
       },
       currentAdmin: false,
       currentReseller: null,
+      maintenanceMode: false,
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
@@ -261,6 +264,19 @@ export const useStore = create<AdminState>()(
       updateGlobalLogo: (base64) => {
         set({ globalLogoUrl: base64 });
         setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true }).catch(console.error);
+      },
+
+      toggleMaintenance: (password) => {
+        const { adminPasswordHash, maintenanceMode } = get();
+        const inputHash = CryptoJS.SHA256(password).toString();
+        if (adminPasswordHash) {
+          if (inputHash !== adminPasswordHash) return false;
+        } else {
+          if (password !== 'admin1234') return false;
+        }
+        set({ maintenanceMode: !maintenanceMode });
+        setDoc(doc(db, 'config', 'global'), { maintenanceMode: !maintenanceMode }, { merge: true }).catch(console.error);
+        return true;
       },
 
       updateApiSettings: (endpoint, token) => {
@@ -910,7 +926,8 @@ export async function initFirebaseSync() {
         globalLogoUrl: data.logoUrl || null,
         apiEndpoint: data.apiEndpoint || "",
         apiToken: data.apiToken || "",
-        adminPasswordHash: data.adminPasswordHash || null
+        adminPasswordHash: data.adminPasswordHash || null,
+        maintenanceMode: data.maintenanceMode || false
       });
     }
   });

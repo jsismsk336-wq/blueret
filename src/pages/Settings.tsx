@@ -257,6 +257,30 @@ export function Settings() {
         </div>
       </motion.div>
 
+      {/* Maintenance Mode Settings */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-[#161925] border border-gray-800/60 rounded-2xl p-6 max-w-xl mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 text-white font-medium">
+            <Lock size={18} className="text-red-500" />
+            <span className="text-red-500 font-bold">โหมดปิดปรับปรุงระบบ (Maintenance Mode)</span>
+          </div>
+          <button 
+            onClick={() => {
+              const pwd = window.prompt("กรุณายืนยันรหัสผ่าน Admin เพื่อเปิด/ปิดโหมดปรับปรุง:");
+              if (pwd) {
+                const success = useStore.getState().toggleMaintenance(pwd);
+                if (success) toast.success("อัปเดตสถานะโหมดปิดปรับปรุงแล้ว");
+                else toast.error("รหัสผ่านไม่ถูกต้อง");
+              }
+            }}
+            className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${useStore.getState().maintenanceMode ? 'bg-red-500' : 'bg-gray-700'}`}
+          >
+            <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${useStore.getState().maintenanceMode ? 'translate-x-5' : 'translate-x-1'}`}></div>
+          </button>
+        </div>
+        <p className="text-sm text-gray-400">เมื่อเปิดใช้งาน ระบบแผงควบคุมและ API ทั้งหมดจะถูกระงับชั่วคราว<br/><br/><span className="text-amber-500 text-xs">เคล็ดลับ: หากเปิดโหมดนี้แล้วถูกเตะออกจากระบบ สามารถปิดได้โดยการคลิกที่ไอคอนสีแดงในหน้าปิดปรับปรุงรัวๆ 7 ครั้ง แล้วกรอกรหัสผ่าน Admin</span></p>
+      </motion.div>
+
       {/* API Settings */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-[#161925] border border-gray-800/60 rounded-2xl p-6 max-w-xl mt-8">
         <div className="flex items-center gap-2 text-white font-medium mb-6">
