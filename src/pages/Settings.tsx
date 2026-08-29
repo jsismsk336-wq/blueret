@@ -278,7 +278,7 @@ export function Settings() {
             <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${useStore.getState().maintenanceMode ? 'translate-x-5' : 'translate-x-1'}`}></div>
           </button>
         </div>
-        <p className="text-sm text-gray-400">เมื่อเปิดใช้งาน ระบบแผงควบคุมและ API ทั้งหมดจะถูกระงับชั่วคราว<br/><br/><span className="text-amber-500 text-xs">เคล็ดลับ: หากเปิดโหมดนี้แล้วถูกเตะออกจากระบบ สามารถปิดได้โดยการคลิกที่ไอคอนสีแดงในหน้าปิดปรับปรุงรัวๆ 7 ครั้ง แล้วกรอกรหัสผ่าน Admin</span></p>
+        <p className="text-sm text-gray-400">เมื่อเปิดใช้งาน ระบบแผงควบคุมและ API ทั้งหมดจะถูกระงับชั่วคราว</p>
       </motion.div>
 
       {/* API Settings */}
