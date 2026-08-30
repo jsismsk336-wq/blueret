@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key, Webhook, Eye, EyeOff, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -21,6 +21,12 @@ export function Settings() {
 
   const [localWebhooks, setLocalWebhooks] = useState(webhooks);
   const [showWebhookUrl, setShowWebhookUrl] = useState<Record<string, boolean>>({});
+  
+  useEffect(() => {
+    setLocalApiEndpoint(apiEndpoint || '');
+    setLocalApiToken(apiToken || '');
+    setLocalWebhooks(webhooks);
+  }, [apiEndpoint, apiToken, webhooks]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
