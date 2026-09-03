@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { generateCsrfToken, validateCsrfToken, acquireRedeemLock, releaseRedeemLock } from '../utils/security';
-import { doc, getDoc, setDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import CryptoJS from 'crypto-js';
 import { sendDiscordLog, COLORS } from '../utils/discord';
@@ -410,7 +410,7 @@ export const useStore = create<AdminState>()(
             p.id === id ? { ...p, customPrices } : p
           )
         });
-        setDoc(doc(db, 'partners', id), { customPrices }, { merge: true });
+        updateDoc(doc(db, 'partners', id), { customPrices }).catch(console.error);
       },
 
       resetPartnerApiToken: (id) => {

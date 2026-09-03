@@ -46,17 +46,16 @@ export default async function handler(req: any, res: any) {
     }
 
     // 1. Authenticate Partner via API Token
-    const partnersSnap = await getDocs(collection(db, 'partners'));
+    const qPartner = query(collection(db, 'partners'), where('apiToken', '==', token), limit(1));
+    const partnersSnap = await getDocs(qPartner);
+    
     let partner: any = null;
     let partnerId = '';
 
-    partnersSnap.forEach((doc) => {
-      const p = doc.data();
-      if (p.apiToken === token) {
-        partner = p;
-        partnerId = doc.id;
-      }
-    });
+    if (!partnersSnap.empty) {
+      partner = partnersSnap.docs[0].data();
+      partnerId = partnersSnap.docs[0].id;
+    }
 
     if (!partner) {
       return res.status(401).json({ status: 'error', message: 'Invalid API Token' });
