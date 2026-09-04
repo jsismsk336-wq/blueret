@@ -749,15 +749,13 @@ export const useStore = create<AdminState>()(
 
               const verifiedKeys: LicenseKey[] = [];
               
-              // Read keys one by one up to currentTargetQty.
-              for (const candidate of candidateKeys) {
+              // Read all keys in parallel to avoid massive delay (2 minutes -> 1 second)
+              const kSnaps = await Promise.all(candidateKeys.map(c => transaction.get(doc(db, 'keys', c.id))));
+              
+              for (const kSnap of kSnaps) {
                  if (verifiedKeys.length >= currentTargetQty) break;
-                 
-                 const keyRef = doc(db, 'keys', candidate.id);
-                 const keySnap = await transaction.get(keyRef);
-                 
-                 if (keySnap.exists()) {
-                   const keyData = keySnap.data() as LicenseKey;
+                 if (kSnap.exists()) {
+                   const keyData = kSnap.data() as LicenseKey;
                    if (keyData.status === 'unused') {
                       verifiedKeys.push(keyData);
                    }
@@ -794,10 +792,10 @@ export const useStore = create<AdminState>()(
             // Fallback: Non-transactional batch update
             try {
               const verifiedKeys: LicenseKey[] = [];
-              for (const candidate of candidateKeys) {
+              const fallbackSnaps = await Promise.all(candidateKeys.map(c => getDoc(doc(db, 'keys', c.id))));
+              
+              for (const keySnap of fallbackSnaps) {
                 if (verifiedKeys.length >= targetQty) break;
-                const keyRef = doc(db, 'keys', candidate.id);
-                const keySnap = await getDoc(keyRef);
                 if (keySnap.exists()) {
                   const keyData = keySnap.data() as LicenseKey;
                   if (keyData.status === 'unused') {

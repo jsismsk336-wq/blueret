@@ -113,14 +113,14 @@ export default async function handler(req: any, res: any) {
       
       const currentBalance = (pSnap.data() as any).balance;
       
-      // Re-read keys inside transaction to ensure they haven't been taken
+      // Re-read all candidate keys in parallel to avoid massive delay
+      const kSnaps = await Promise.all(candidateKeys.map(c => transaction.get(doc(db, 'keys', c.id))));
+      
       const verifiedKeys: any[] = [];
-      for (const candidate of candidateKeys) {
+      for (const kSnap of kSnaps) {
         if (verifiedKeys.length >= targetQty) break;
-        const keyRef = doc(db, 'keys', candidate.id);
-        const kSnap = await transaction.get(keyRef);
         if (kSnap.exists() && (kSnap.data() as any).status === 'unused') {
-          verifiedKeys.push({ id: candidate.id, keyString: (kSnap.data() as any).keyString });
+          verifiedKeys.push({ id: kSnap.id, keyString: (kSnap.data() as any).keyString });
         }
       }
 
