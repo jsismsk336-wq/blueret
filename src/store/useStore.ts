@@ -846,10 +846,15 @@ export const useStore = create<AdminState>()(
             const { webhooks } = get();
             if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
               const actualQty = result.length;
+              const keyListString = result.map(k => k.keyString).join('\n');
+              
+              // Discord description limit is 4096 chars, 50 keys is ~1150 chars so it's safe
+              const description = `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่\n\n**รายการคีย์ที่ได้:**\n\`\`\`\n${keyListString}\n\`\`\``;
+
               sendDiscordLog(webhooks.resellerLogs.url, {
                 embeds: [{
                   title: "🛒 ดึงคีย์สำเร็จ",
-                  description: `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่`,
+                  description: description,
                   color: COLORS.SUCCESS,
                   fields: [
                     { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },

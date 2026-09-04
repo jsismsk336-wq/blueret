@@ -151,6 +151,38 @@ export default async function handler(req: any, res: any) {
       }
     });
 
+    // Send Discord Log if webhook is configured
+    try {
+      const whSnap = await getDoc(doc(db, 'config', 'webhooks'));
+      if (whSnap.exists()) {
+        const whData = whSnap.data();
+        if (whData.resellerLogs?.enabled && whData.resellerLogs.url) {
+          const keyListString = redeemedKeys.join('\n');
+          const description = `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่ (ผ่านระบบ API)\n\n**รายการคีย์ที่ได้:**\n\`\`\`\n${keyListString}\n\`\`\``;
+          
+          await fetch(whData.resellerLogs.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              embeds: [{
+                title: "🛒 ดึงคีย์สำเร็จ (API)",
+                description: description,
+                color: 2331212, // success color
+                fields: [
+                  { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },
+                  { name: "จำนวน", value: `${redeemedKeys.length} คีย์`, inline: true },
+                  { name: "เครดิตที่ใช้", value: `${unitCost * redeemedKeys.length}`, inline: true }
+                ],
+                timestamp: new Date().toISOString()
+              }]
+            })
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Webhook failed", e);
+    }
+
     return res.status(200).json({
       status: 'success',
       keys: redeemedKeys,
