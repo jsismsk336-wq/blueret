@@ -894,31 +894,37 @@ export const useStore = create<AdminState>()(
 
 export async function initFirebaseSync() {
   const globalConfigRef = doc(db, 'config', 'global');
-  const globalConfigSnap = await getDoc(globalConfigRef);
+  
+  try {
+    const globalConfigSnap = await getDoc(globalConfigRef);
 
-  if (!globalConfigSnap.exists()) {
-    const batch = writeBatch(db);
-    batch.set(globalConfigRef, { adminBalance: 90000000000000000 });
-    
-    initialPartners.forEach(p => {
-      batch.set(doc(db, 'partners', p.id), p);
-    });
-    
-    initialKeys.forEach(k => {
-      batch.set(doc(db, 'keys', k.id), k);
-    });
-    
-    initialPackages.forEach(p => {
-      batch.set(doc(db, 'packages', p.days.toString()), p);
-    });
-    
-    batch.set(doc(db, 'config', 'webhooks'), {
-      adminLogs: { url: '', enabled: false },
-      resellerLogs: { url: '', enabled: false },
-      systemLogs: { url: '', enabled: false }
-    });
-    
-    await batch.commit();
+    if (!globalConfigSnap.exists()) {
+      const batch = writeBatch(db);
+      batch.set(globalConfigRef, { adminBalance: 90000000000000000 });
+      
+      initialPartners.forEach(p => {
+        batch.set(doc(db, 'partners', p.id), p);
+      });
+      
+      initialKeys.forEach(k => {
+        batch.set(doc(db, 'keys', k.id), k);
+      });
+      
+      initialPackages.forEach(p => {
+        batch.set(doc(db, 'packages', p.days.toString()), p);
+      });
+      
+      batch.set(doc(db, 'config', 'webhooks'), {
+        adminLogs: { url: '', enabled: false },
+        resellerLogs: { url: '', enabled: false },
+        systemLogs: { url: '', enabled: false }
+      });
+      
+      await batch.commit();
+    }
+  } catch (e: any) {
+    console.error("Firebase init getDoc failed (Quota Exceeded?):", e);
+    // Proceed to register onSnapshot anyway so it can load from offline cache
   }
 
   onSnapshot(globalConfigRef, (docSnap: any) => {

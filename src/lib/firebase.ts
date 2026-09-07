@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZ8diiXPpwWbaL1vwpoLtCvub--jvPIQ0",
@@ -16,3 +16,7 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
+
+enableIndexedDbPersistence(db).catch((err) => {
+  console.warn("Firebase persistence error:", err.code);
+});
