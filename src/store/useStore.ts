@@ -721,8 +721,18 @@ export const useStore = create<AdminState>()(
 
           const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
           
-          // Find candidates from local state (avoids composite index requirement)
-          const candidateKeys = keys.filter(k => k.durationDays === durationDays && k.status === 'unused');
+          // Fetch candidate keys directly from Firestore (to avoid needing all keys in local store)
+          const keysRef = collection(db, 'keys');
+          const keysQuery = query(
+            keysRef,
+            where('durationDays', '==', durationDays),
+            where('status', '==', 'unused'),
+            limit(safeQty + 10) // Buffer for race conditions
+          );
+          
+          const keysSnap = await getDocs(keysQuery);
+          const candidateKeys = keysSnap.docs.map(d => d.data() as LicenseKey);
+          
           if (candidateKeys.length === 0) return 'no_stock';
 
           const affordableQty = Math.floor(partner.balance / unitCost);
@@ -953,9 +963,39 @@ export async function initFirebaseSync() {
     useStore.setState({ partners });
   });
 
-  onSnapshot(collection(db, 'keys'), (snapshot: any) => {
-    const keys = snapshot.docs.map((doc: any) => doc.data() as LicenseKey);
-    useStore.setState({ keys });
+  const state = useStore.getState();
+
+  // Only sync all keys if admin. Resellers do not need all keys in state.
+  let keysUnsubscribe: any = null;
+  const setupKeysListener = (isAdmin: boolean) => {
+    if (keysUnsubscribe) keysUnsubscribe();
+    if (isAdmin) {
+      keysUnsubscribe = onSnapshot(collection(db, 'keys'), (snapshot: any) => {
+        const keys = snapshot.docs.map((doc: any) => doc.data() as LicenseKey);
+        useStore.setState({ keys });
+      });
+    } else {
+      // If reseller, they don't need real-time stock array, they will fetch counts via API
+      // But they need their own redeemed keys for history
+      const { currentReseller } = useStore.getState();
+      if (currentReseller) {
+        const q = query(collection(db, 'keys'), where('redeemedBy', '==', currentReseller.id));
+        keysUnsubscribe = onSnapshot(q, (snapshot: any) => {
+          const keys = snapshot.docs.map((doc: any) => doc.data() as LicenseKey);
+          useStore.setState({ keys });
+        });
+      } else {
+        useStore.setState({ keys: [] });
+      }
+    }
+  };
+
+  setupKeysListener(state.currentAdmin);
+
+  useStore.subscribe((newState, prevState) => {
+    if (newState.currentAdmin !== prevState.currentAdmin || newState.currentReseller?.id !== prevState.currentReseller?.id) {
+      setupKeysListener(newState.currentAdmin);
+    }
   });
 
   onSnapshot(collection(db, 'packages'), (snapshot: any) => {

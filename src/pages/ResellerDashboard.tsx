@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import { getCsrfToken, initSecurityHardening } from '../utils/security';
 import { AnnouncementPopupModal } from '../components/ui/AnnouncementPopupModal';
 import type { LicenseKey } from '../store/useStore';
+import { getCountFromServer, collection, query, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 // ─── Result Modal (multi-key) ─────────────────────────────────────────────────
 function KeyResultModal({ keys, onClose }: { keys: LicenseKey[]; onClose: () => void }) {
@@ -135,22 +137,48 @@ function QuantityPicker({ value, onChange }: { value: number; onChange: (v: numb
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export function ResellerDashboard() {
-  const { currentReseller, packages, keys, redeemKey } = useStore();
+  const { currentReseller, packages, redeemKey } = useStore();
   const { t } = useTranslation();
   const [resultKeys, setResultKeys] = useState<LicenseKey[] | null>(null);
   const [redeemingDays, setRedeemingDays] = useState<number | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number>(0);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [stockCounts, setStockCounts] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const cleanup = initSecurityHardening();
     return cleanup;
   }, []);
 
+  useEffect(() => {
+    const fetchStock = async () => {
+      const counts: Record<number, number> = {};
+      await Promise.all(packages.map(async (pkg) => {
+        try {
+          const q = query(
+            collection(db, 'keys'),
+            where('durationDays', '==', pkg.days),
+            where('status', '==', 'unused')
+          );
+          const snapshot = await getCountFromServer(q);
+          counts[pkg.days] = snapshot.data().count;
+        } catch (e) {
+          console.error("Failed to fetch stock for", pkg.days, e);
+          counts[pkg.days] = 0;
+        }
+      }));
+      setStockCounts(counts);
+    };
+    
+    if (packages.length > 0) {
+      fetchStock();
+    }
+  }, [packages]);
+
   const partner = currentReseller;
   if (!partner) return null;
 
-  const getStock = (days: number) => keys.filter(k => k.durationDays === days && k.status === 'unused').length;
+  const getStock = (days: number) => stockCounts[days] || 0;
   const getQty = (days: number) => quantities[days] ?? 1;
   const setQty = (days: number, v: number) => setQuantities(prev => ({ ...prev, [days]: v }));
 
