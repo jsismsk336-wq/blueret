@@ -854,6 +854,18 @@ export const useStore = create<AdminState>()(
           if (result === 'no_stock_race') return 'no_stock';
 
           if (Array.isArray(result) && result.length > 0) {
+            const actualQty = result.length;
+            const totalCost = unitCost * actualQty;
+
+            // Optimistically update currentReseller & partners balance locally
+            set((st) => {
+              const newBalance = (st.currentReseller?.balance ?? partner.balance) - totalCost;
+              return {
+                currentReseller: st.currentReseller ? { ...st.currentReseller, balance: newBalance } : null,
+                partners: st.partners.map(p => p.id === partner.id ? { ...p, balance: newBalance } : p)
+              };
+            });
+
             const { webhooks } = get();
             if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
               const actualQty = result.length;
@@ -961,6 +973,14 @@ export async function initFirebaseSync() {
 
   onSnapshot(collection(db, 'partners'), (snapshot: any) => {
     const partners = snapshot.docs.map((doc: any) => doc.data() as Partner);
+    const { currentReseller } = useStore.getState();
+    if (currentReseller) {
+      const updatedReseller = partners.find(p => p.id === currentReseller.id);
+      if (updatedReseller) {
+        useStore.setState({ partners, currentReseller: updatedReseller });
+        return;
+      }
+    }
     useStore.setState({ partners });
   });
 
