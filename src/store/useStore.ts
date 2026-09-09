@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { generateCsrfToken, validateCsrfToken, acquireRedeemLock, releaseRedeemLock } from '../utils/security';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import CryptoJS from 'crypto-js';
 import { sendDiscordLog, COLORS } from '../utils/discord';
@@ -704,6 +704,7 @@ export const useStore = create<AdminState>()(
 
       // ─── RESELLER ACTIONS ─────────────────────────────────────────────────────
       redeemKey: async (durationDays, quantity, csrfToken) => {
+        if (get().maintenanceMode) return 'maintenance';
         if (!validateCsrfToken(csrfToken)) return 'csrf_error';
         if (!acquireRedeemLock()) return 'locked';
 

@@ -201,7 +201,9 @@ export function ResellerDashboard() {
     const result = await redeemKey(days, qty, token);
     setRedeemingDays(null);
 
-    if (result === 'no_credit') {
+    if (result === 'maintenance') {
+      toast.error('ระบบปิดปรับปรุงชั่วคราว ไม่สามารถดึงคีย์ได้ในขณะนี้');
+    } else if (result === 'no_credit') {
       toast.error(t('reseller.notEnoughCredit'));
     } else if (result === 'no_stock') {
       toast.error(t('reseller.stockEmpty'));
