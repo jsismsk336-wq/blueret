@@ -697,7 +697,7 @@ export const useStore = create<AdminState>()(
           
           if (!currentReseller) return 'no_credit';
 
-          const pkg = packages.find(p => p.days === durationDays);
+          const pkg = packages.find(p => Number(p.days) === Number(durationDays));
           if (!pkg) return 'no_stock';
 
           const partner = partners.find(p => p.id === currentReseller.id);
@@ -705,7 +705,7 @@ export const useStore = create<AdminState>()(
 
           const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
           
-          // Find candidates from local state (avoids composite index requirement)
+          // Find candidates from local state matching durationDays & unused status
           const candidateKeys = keys.filter(k => Number(k.durationDays) === Number(durationDays) && k.status === 'unused');
           if (candidateKeys.length === 0) return 'no_stock';
 
@@ -713,145 +713,62 @@ export const useStore = create<AdminState>()(
           const targetQty = Math.min(safeQty, affordableQty, candidateKeys.length);
           if (targetQty === 0) return 'no_credit';
 
-          let result;
-          try {
-            // Use Firestore Transaction to prevent race conditions and pumping
-            result = await runTransaction(db, async (transaction) => {
-              // 1. Read partner data
-              const partnerRef = doc(db, 'partners', partner.id);
-              const partnerSnap = await transaction.get(partnerRef);
-              if (!partnerSnap.exists()) throw "Partner not found";
-              
-              const partnerData = partnerSnap.data() as Partner;
-              const currentBalance = partnerData.balance;
+          const targetCandidates = candidateKeys.slice(0, targetQty);
+          const totalCost = unitCost * targetCandidates.length;
+          const newBalance = partner.balance - totalCost;
+          const now = Date.now();
 
-              // 2. Verify candidate keys are still unused
-              const currentAffordableQty = Math.floor(currentBalance / unitCost);
-              const currentTargetQty = Math.min(safeQty, currentAffordableQty, candidateKeys.length);
-              
-              if (currentTargetQty === 0) return 'no_credit';
+          // Execute atomic write batch (fast & single network call)
+          const batch = writeBatch(db);
+          batch.update(doc(db, 'partners', partner.id), { balance: newBalance });
 
-              const verifiedKeys: LicenseKey[] = [];
-              
-              // Read keys one by one up to currentTargetQty.
-              for (const candidate of candidateKeys) {
-                 if (verifiedKeys.length >= currentTargetQty) break;
-                 
-                 const keyRef = doc(db, 'keys', candidate.id);
-                 const keySnap = await transaction.get(keyRef);
-                 
-                 if (keySnap.exists()) {
-                   const keyData = keySnap.data() as LicenseKey;
-                   if (keyData.status === 'unused') {
-                      verifiedKeys.push(keyData);
-                   }
-                 }
-              }
+          const redeemedKeysList: LicenseKey[] = targetCandidates.map(k => ({
+            ...k,
+            status: 'active',
+            redeemedBy: partner.id,
+            redeemedAt: now,
+          }));
 
-              if (verifiedKeys.length === 0) return 'no_stock_race';
-
-              // 3. Write updates
-              const actualQty = verifiedKeys.length;
-              const totalCost = unitCost * actualQty;
-              const newBalance = currentBalance - totalCost;
-
-              transaction.set(partnerRef, { balance: newBalance }, { merge: true });
-              
-              const now = Date.now();
-              const redeemedKeysList: LicenseKey[] = [];
-              
-              verifiedKeys.forEach(k => {
-                const keyRef = doc(db, 'keys', k.id);
-                transaction.set(keyRef, {
-                  status: 'active',
-                  redeemedBy: partner.id,
-                  redeemedAt: now
-                }, { merge: true });
-                redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
-              });
-
-              return redeemedKeysList;
+          redeemedKeysList.forEach(k => {
+            batch.update(doc(db, 'keys', k.id), {
+              status: 'active',
+              redeemedBy: partner.id,
+              redeemedAt: now,
             });
-          } catch (error: any) {
-            console.error("Transaction failed: ", error);
-            
-            // Fallback: Non-transactional batch update
-            try {
-              const verifiedKeys: LicenseKey[] = [];
-              for (const candidate of candidateKeys) {
-                if (verifiedKeys.length >= targetQty) break;
-                const keyRef = doc(db, 'keys', candidate.id);
-                const keySnap = await getDoc(keyRef);
-                if (keySnap.exists()) {
-                  const keyData = keySnap.data() as LicenseKey;
-                  if (keyData.status === 'unused') {
-                    verifiedKeys.push(keyData);
-                  }
-                }
-              }
+          });
 
-              if (verifiedKeys.length === 0) return 'no_stock_race';
+          await batch.commit();
 
-              const actualQty = verifiedKeys.length;
-              const totalCost = unitCost * actualQty;
+          // Update local Zustand state IMMEDIATELY so credit and keys update live on UI!
+          const redeemedIds = new Set(redeemedKeysList.map(k => k.id));
+          set(state => ({
+            currentReseller: state.currentReseller ? { ...state.currentReseller, balance: newBalance } : null,
+            partners: state.partners.map(p => p.id === partner.id ? { ...p, balance: newBalance } : p),
+            keys: state.keys.map(k => redeemedIds.has(k.id) ? { ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now } : k),
+          }));
 
-              const partnerRef = doc(db, 'partners', partner.id);
-              const partnerSnap = await getDoc(partnerRef);
-              if (!partnerSnap.exists()) return 'locked';
-              
-              const pData = partnerSnap.data() as Partner;
-              if (pData.balance < totalCost) return 'no_credit';
-
-              const batch = writeBatch(db);
-              batch.set(partnerRef, { balance: pData.balance - totalCost }, { merge: true });
-
-              const now = Date.now();
-              const redeemedKeysList: LicenseKey[] = [];
-
-              verifiedKeys.forEach(k => {
-                const keyRef = doc(db, 'keys', k.id);
-                batch.set(keyRef, {
-                  status: 'active',
-                  redeemedBy: partner.id,
-                  redeemedAt: now
-                }, { merge: true });
-                redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
-              });
-
-              await batch.commit();
-              result = redeemedKeysList;
-            } catch (fallbackError: any) {
-              console.error("Fallback failed: ", fallbackError);
-              return `transaction_error:${fallbackError?.message || 'unknown'}`;
-            }
-          }
-
-          if (result === 'no_stock_race') return 'no_stock';
-
-          if (Array.isArray(result) && result.length > 0) {
-            const { webhooks } = get();
-            if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
-              const actualQty = result.length;
-              sendDiscordLog(webhooks.resellerLogs.url, {
-                embeds: [{
-                  title: "🛒 ดึงคีย์สำเร็จ",
-                  description: `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่`,
-                  color: COLORS.SUCCESS,
-                  fields: [
-                    { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },
-                    { name: "จำนวน", value: `${actualQty} คีย์`, inline: true },
-                    { name: "เครดิตที่ใช้", value: `${unitCost * actualQty}`, inline: true }
-                  ],
-                  timestamp: new Date().toISOString()
-                }]
-              });
-            }
+          // Send Discord log if enabled
+          const { webhooks } = get();
+          if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
+            sendDiscordLog(webhooks.resellerLogs.url, {
+              embeds: [{
+                title: "🛒 ดึงคีย์สำเร็จ",
+                description: `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่`,
+                color: COLORS.SUCCESS,
+                fields: [
+                  { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },
+                  { name: "จำนวน", value: `${redeemedKeysList.length} คีย์`, inline: true },
+                  { name: "เครดิตที่ใช้", value: `${totalCost} เครดิต`, inline: true }
+                ],
+                timestamp: new Date().toISOString()
+              }]
+            });
           }
 
           generateCsrfToken();
-          return result;
+          return redeemedKeysList;
         } catch (error: any) {
-          console.error("Main block failed: ", error);
+          console.error("redeemKey Error: ", error);
           return `transaction_error:${error?.message || 'unknown'}`;
         } finally {
           releaseRedeemLock();
@@ -924,6 +841,14 @@ export async function initFirebaseSync() {
 
   onSnapshot(collection(db, 'partners'), (snapshot: any) => {
     const partners = snapshot.docs.map((doc: any) => doc.data() as Partner);
+    const { currentReseller } = useStore.getState();
+    if (currentReseller) {
+      const updatedReseller = partners.find(p => p.id === currentReseller.id);
+      if (updatedReseller) {
+        useStore.setState({ partners, currentReseller: updatedReseller });
+        return;
+      }
+    }
     useStore.setState({ partners });
   });
 
