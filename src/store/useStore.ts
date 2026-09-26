@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { generateCsrfToken, validateCsrfToken, acquireRedeemLock, releaseRedeemLock } from '../utils/security';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import CryptoJS from 'crypto-js';
 import { sendDiscordLog, COLORS } from '../utils/discord';
@@ -33,33 +33,6 @@ const secureStorage = {
   },
 };
 
-export interface Category {
-  id: string;
-  name: string;
-  icon?: string;
-  order: number;
-  createdAt: number;
-}
-
-export interface ProductPlan {
-  id: string;
-  days: number;
-  label: string;
-  cost: number;
-}
-
-export interface Product {
-  id: string;
-  title: string;
-  description: string;
-  imageUrl: string;
-  categoryId: string;
-  plans: ProductPlan[];
-  isPopular?: boolean;
-  soldCount: number;
-  createdAt: number;
-}
-
 export interface Partner {
   id: string;
   username: string;
@@ -81,8 +54,6 @@ export interface LicenseKey {
   createdBy: string;
   redeemedBy: string | null;
   redeemedAt: number | null;
-  productId?: string;
-  planId?: string;
 }
 
 export interface Package {
@@ -127,21 +98,17 @@ export interface WebhooksState {
 interface AdminState {
   adminBalance: number;
   globalLogoUrl: string | null;
-  landingBgUrl: string | null;
   apiEndpoint: string | null;
   apiToken: string | null;
   adminPasswordHash: string | null;
   partners: Partner[];
   keys: LicenseKey[];
   packages: Package[];
-  categories: Category[];
-  products: Product[];
   resetRequests: ResetRequest[];
   announcements: Announcement[];
   webhooks: WebhooksState;
   currentAdmin: boolean;
   currentReseller: Partner | null;
-  maintenanceMode: boolean;
 
   // Auth
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
@@ -150,11 +117,9 @@ interface AdminState {
 
   // System Settings
   updateGlobalLogo: (base64: string | null) => void;
-  updateLandingBgUrl: (url: string | null) => void;
   updateApiSettings: (endpoint: string, token: string) => void;
   updateWebhook: (type: keyof WebhooksState, config: WebhookConfig) => void;
   updateAdminPassword: (currentPass: string, newPass: string) => boolean;
-  toggleMaintenance: (password: string) => boolean;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -188,20 +153,8 @@ interface AdminState {
   toggleAnnouncementActive: (id: string) => void;
   deleteAnnouncement: (id: string) => void;
 
-  // Category management (admin)
-  addCategory: (name: string, icon?: string) => void;
-  updateCategory: (id: string, name: string, icon?: string) => void;
-  deleteCategory: (id: string) => void;
-
-  // Product management (admin)
-  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'soldCount'>) => void;
-  updateProduct: (id: string, productData: Partial<Omit<Product, 'id' | 'createdAt'>>) => void;
-  deleteProduct: (id: string) => void;
-  addKeysToProductPlan: (productId: string, planId: string, durationDays: number, keyStrings: string[], creator: string) => Promise<number>;
-
   // Reseller action - requires CSRF token
   redeemKey: (durationDays: number, quantity: number, csrfToken: string) => Promise<LicenseKey[] | 'no_stock' | 'no_credit' | 'csrf_error' | 'locked' | 'partial'>;
-  purchaseProductKey: (productId: string, planId: string, csrfToken: string, quantity?: number) => Promise<{ success: boolean; keys?: LicenseKey[]; key?: LicenseKey; error?: string }>;
 }
 
 const generateRandomString = (length: number) => {
@@ -250,8 +203,6 @@ export const useStore = create<AdminState>()(
       partners: [],
       keys: [],
       packages: [],
-      categories: [],
-      products: [],
       resetRequests: [],
       announcements: [],
       webhooks: {
@@ -261,12 +212,10 @@ export const useStore = create<AdminState>()(
       },
       currentAdmin: false,
       currentReseller: null,
-      maintenanceMode: false,
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
-        const cleanUser = username.trim();
-        if (cleanUser === 'LuckyMaster_Admin99' || cleanUser === 'admin') {
+        if (username === 'admin') {
           const { adminPasswordHash } = get();
           const inputHash = CryptoJS.SHA256(password).toString();
           
@@ -277,7 +226,7 @@ export const useStore = create<AdminState>()(
               return 'admin';
             }
           } else {
-            if (password === 'Lucky#Secure2026@X' || password === 'admin1234') {
+            if (password === 'admin1234') {
               set({ currentAdmin: true });
               generateCsrfToken();
               return 'admin';
@@ -314,24 +263,6 @@ export const useStore = create<AdminState>()(
         setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true }).catch(console.error);
       },
 
-      updateLandingBgUrl: (url) => {
-        set({ landingBgUrl: url });
-        setDoc(doc(db, 'config', 'global'), { landingBgUrl: url }, { merge: true }).catch(console.error);
-      },
-
-      toggleMaintenance: (password) => {
-        const { adminPasswordHash, maintenanceMode } = get();
-        const inputHash = CryptoJS.SHA256(password).toString();
-        if (adminPasswordHash) {
-          if (inputHash !== adminPasswordHash) return false;
-        } else {
-          if (password !== 'Lucky#Secure2026@X' && password !== 'admin1234') return false;
-        }
-        set({ maintenanceMode: !maintenanceMode });
-        setDoc(doc(db, 'config', 'global'), { maintenanceMode: !maintenanceMode }, { merge: true }).catch(console.error);
-        return true;
-      },
-
       updateApiSettings: (endpoint, token) => {
         set({ apiEndpoint: endpoint, apiToken: token });
         setDoc(doc(db, 'config', 'global'), { apiEndpoint: endpoint, apiToken: token }, { merge: true }).catch(console.error);
@@ -351,7 +282,7 @@ export const useStore = create<AdminState>()(
         if (adminPasswordHash) {
           if (currentInputHash !== adminPasswordHash) return false;
         } else {
-          if (currentPass !== 'Lucky#Secure2026@X' && currentPass !== 'admin1234') return false;
+          if (currentPass !== 'admin1234') return false;
         }
 
         const newHash = CryptoJS.SHA256(newPass).toString();
@@ -463,7 +394,7 @@ export const useStore = create<AdminState>()(
             p.id === id ? { ...p, customPrices } : p
           )
         });
-        updateDoc(doc(db, 'partners', id), { customPrices }).catch(console.error);
+        setDoc(doc(db, 'partners', id), { customPrices }, { merge: true });
       },
 
       resetPartnerApiToken: (id) => {
@@ -486,7 +417,7 @@ export const useStore = create<AdminState>()(
 
         const newKeys: LicenseKey[] = Array.from({ length: amount }).map(() => ({
           id: generateRandomString(8),
-          keyString: `LUCKY-${generateRandomString(4)}-${generateRandomString(4)}-${generateRandomString(4)}`,
+          keyString: `BLUERET-${generateRandomString(4)}-${generateRandomString(4)}-${generateRandomString(4)}`,
           durationDays,
           createdAt: Date.now(),
           status: 'unused' as const,
@@ -757,7 +688,6 @@ export const useStore = create<AdminState>()(
 
       // ─── RESELLER ACTIONS ─────────────────────────────────────────────────────
       redeemKey: async (durationDays, quantity, csrfToken) => {
-        if (get().maintenanceMode) return 'maintenance';
         if (!validateCsrfToken(csrfToken)) return 'csrf_error';
         if (!acquireRedeemLock()) return 'locked';
 
@@ -775,18 +705,8 @@ export const useStore = create<AdminState>()(
 
           const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
           
-          // Fetch candidate keys directly from Firestore (to avoid needing all keys in local store)
-          const keysRef = collection(db, 'keys');
-          const keysQuery = query(
-            keysRef,
-            where('durationDays', '==', durationDays),
-            where('status', '==', 'unused'),
-            limit(safeQty + 10) // Buffer for race conditions
-          );
-          
-          const keysSnap = await getDocs(keysQuery);
-          const candidateKeys = keysSnap.docs.map(d => d.data() as LicenseKey);
-          
+          // Find candidates from local state (avoids composite index requirement)
+          const candidateKeys = keys.filter(k => Number(k.durationDays) === Number(durationDays) && k.status === 'unused');
           if (candidateKeys.length === 0) return 'no_stock';
 
           const affordableQty = Math.floor(partner.balance / unitCost);
@@ -813,13 +733,15 @@ export const useStore = create<AdminState>()(
 
               const verifiedKeys: LicenseKey[] = [];
               
-              // Read all keys in parallel to avoid massive delay (2 minutes -> 1 second)
-              const kSnaps = await Promise.all(candidateKeys.map(c => transaction.get(doc(db, 'keys', c.id))));
-              
-              for (const kSnap of kSnaps) {
+              // Read keys one by one up to currentTargetQty.
+              for (const candidate of candidateKeys) {
                  if (verifiedKeys.length >= currentTargetQty) break;
-                 if (kSnap.exists()) {
-                   const keyData = kSnap.data() as LicenseKey;
+                 
+                 const keyRef = doc(db, 'keys', candidate.id);
+                 const keySnap = await transaction.get(keyRef);
+                 
+                 if (keySnap.exists()) {
+                   const keyData = keySnap.data() as LicenseKey;
                    if (keyData.status === 'unused') {
                       verifiedKeys.push(keyData);
                    }
@@ -856,10 +778,10 @@ export const useStore = create<AdminState>()(
             // Fallback: Non-transactional batch update
             try {
               const verifiedKeys: LicenseKey[] = [];
-              const fallbackSnaps = await Promise.all(candidateKeys.map(c => getDoc(doc(db, 'keys', c.id))));
-              
-              for (const keySnap of fallbackSnaps) {
+              for (const candidate of candidateKeys) {
                 if (verifiedKeys.length >= targetQty) break;
+                const keyRef = doc(db, 'keys', candidate.id);
+                const keySnap = await getDoc(keyRef);
                 if (keySnap.exists()) {
                   const keyData = keySnap.data() as LicenseKey;
                   if (keyData.status === 'unused') {
@@ -907,30 +829,13 @@ export const useStore = create<AdminState>()(
           if (result === 'no_stock_race') return 'no_stock';
 
           if (Array.isArray(result) && result.length > 0) {
-            const actualQty = result.length;
-            const totalCost = unitCost * actualQty;
-
-            // Optimistically update currentReseller & partners balance locally
-            set((st) => {
-              const newBalance = (st.currentReseller?.balance ?? partner.balance) - totalCost;
-              return {
-                currentReseller: st.currentReseller ? { ...st.currentReseller, balance: newBalance } : null,
-                partners: st.partners.map(p => p.id === partner.id ? { ...p, balance: newBalance } : p)
-              };
-            });
-
             const { webhooks } = get();
             if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
               const actualQty = result.length;
-              const keyListString = result.map(k => k.keyString).join('\n');
-              
-              // Discord description limit is 4096 chars, 50 keys is ~1150 chars so it's safe
-              const description = `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่\n\n**รายการคีย์ที่ได้:**\n\`\`\`\n${keyListString}\n\`\`\``;
-
               sendDiscordLog(webhooks.resellerLogs.url, {
                 embeds: [{
                   title: "🛒 ดึงคีย์สำเร็จ",
-                  description: description,
+                  description: `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่`,
                   color: COLORS.SUCCESS,
                   fields: [
                     { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },
@@ -947,225 +852,7 @@ export const useStore = create<AdminState>()(
           return result;
         } catch (error: any) {
           console.error("Main block failed: ", error);
-        } finally {
-          releaseRedeemLock();
-        }
-      },
-
-      // Category Actions
-      addCategory: (name: string, icon?: string) => {
-        const newCat: Category = {
-          id: 'cat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-          name: name.trim(),
-          icon: icon || 'Folder',
-          order: get().categories.length,
-          createdAt: Date.now(),
-        };
-        set(state => ({ categories: [...state.categories, newCat] }));
-        setDoc(doc(db, 'categories', newCat.id), newCat).catch(err => console.error("addCategory error:", err));
-      },
-
-      updateCategory: (id: string, name: string, icon?: string) => {
-        set(state => ({
-          categories: state.categories.map(c => c.id === id ? { ...c, name: name.trim(), icon: icon || c.icon } : c)
-        }));
-        updateDoc(doc(db, 'categories', id), { name: name.trim(), icon }).catch(err => console.error("updateCategory error:", err));
-      },
-
-      deleteCategory: (id: string) => {
-        set(state => ({
-          categories: state.categories.filter(c => c.id !== id)
-        }));
-        deleteDoc(doc(db, 'categories', id)).catch(err => console.error("deleteCategory error:", err));
-      },
-
-      // Product Actions
-      addProduct: (data: Omit<Product, 'id' | 'createdAt' | 'soldCount'>) => {
-        const newProd: Product = {
-          ...data,
-          id: 'prod_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-          soldCount: 0,
-          createdAt: Date.now(),
-        };
-        set(state => ({ products: [newProd, ...state.products] }));
-        setDoc(doc(db, 'products', newProd.id), newProd).catch(err => console.error("addProduct error:", err));
-      },
-
-      updateProduct: (id: string, productData: Partial<Omit<Product, 'id' | 'createdAt'>>) => {
-        set(state => ({
-          products: state.products.map(p => p.id === id ? { ...p, ...productData } : p)
-        }));
-        updateDoc(doc(db, 'products', id), productData).catch(err => console.error("updateProduct error:", err));
-      },
-
-      deleteProduct: (id: string) => {
-        set(state => ({
-          products: state.products.filter(p => p.id !== id)
-        }));
-        deleteDoc(doc(db, 'products', id)).catch(err => console.error("deleteProduct error:", err));
-      },
-
-      // Stock Upload to specific Product & Plan
-      addKeysToProductPlan: async (productId: string, planId: string, durationDays: number, keyStrings: string[], creator: string) => {
-        const now = Date.now();
-        const newKeys: LicenseKey[] = keyStrings.map((keyStr, idx) => ({
-          id: 'k_' + now + '_' + idx + '_' + Math.random().toString(36).substring(2, 6),
-          keyString: keyStr.trim(),
-          durationDays,
-          createdAt: now,
-          status: 'unused',
-          hwid: null,
-          createdBy: creator,
-          redeemedBy: null,
-          redeemedAt: null,
-          productId,
-          planId,
-        }));
-
-        set(state => ({ keys: [...state.keys, ...newKeys] }));
-
-        const batchSize = 500;
-        for (let i = 0; i < newKeys.length; i += batchSize) {
-          const chunk = newKeys.slice(i, i + batchSize);
-          const batch = writeBatch(db);
-          chunk.forEach(k => batch.set(doc(db, 'keys', k.id), k));
-          await batch.commit();
-        }
-
-        return newKeys.length;
-      },
-
-      // Purchase Product Key (Support quantity 1 to 50 keys)
-      purchaseProductKey: async (productId: string, planId: string, csrfToken: string, quantity: number = 1) => {
-        const numToPull = Math.min(50, Math.max(1, Math.floor(quantity)));
-        const { currentReseller, products, keys } = get();
-        if (!currentReseller) return { success: false, error: 'กรุณาเข้าสู่ระบบก่อนดึงคีย์' };
-        if (!validateCsrfToken(csrfToken)) return { success: false, error: 'CSRF Token ไม่ถูกต้อง' };
-        if (!acquireRedeemLock()) return { success: false, error: 'กำลังทำรายการ โปรดรอสักครู่' };
-
-        try {
-          const product = products.find(p => p.id === productId);
-          if (!product) return { success: false, error: 'ไม่พบข้อมูลสินค้านี้' };
-          
-          const plan = product.plans.find(p => p.id === planId);
-          if (!plan) return { success: false, error: 'ไม่พบแพ็กเกจสินค้านี้' };
-
-          const totalCost = plan.cost * numToPull;
-
-          if (currentReseller.balance < totalCost) {
-            return { success: false, error: `ยอดเงินคงเหลือไม่เพียงพอ (ต้องการ ${totalCost} เครดิต แต่คุณมี ${currentReseller.balance} เครดิต)` };
-          }
-
-          // Search for unused matching keys from local store first
-          let matchingKeys = keys.filter(k => 
-            k.status === 'unused' && (
-              (k.productId === productId && k.planId === planId) ||
-              (k.productId === productId && k.durationDays === plan.days) ||
-              (!k.productId && k.durationDays === plan.days)
-            )
-          );
-
-          // If local state doesn't have enough, fetch directly from Firestore collection
-          if (matchingKeys.length < numToPull) {
-            const q = query(
-              collection(db, 'keys'),
-              where('status', '==', 'unused'),
-              limit(100)
-            );
-            const querySnap = await getDocs(q);
-            const fetchedKeys = querySnap.docs.map(doc => doc.data() as LicenseKey);
-            
-            const filtered = fetchedKeys.filter(k => 
-              k.status === 'unused' && (
-                (k.productId === productId && k.planId === planId) ||
-                (k.productId === productId && k.durationDays === plan.days) ||
-                (!k.productId && k.durationDays === plan.days)
-              )
-            );
-            
-            const map = new Map<string, LicenseKey>();
-            matchingKeys.forEach(k => map.set(k.id, k));
-            filtered.forEach(k => map.set(k.id, k));
-            matchingKeys = Array.from(map.values());
-          }
-
-          const targetKeys = matchingKeys.slice(0, numToPull);
-
-          if (targetKeys.length < numToPull) {
-            return { 
-              success: false, 
-              error: targetKeys.length === 0 
-                ? 'ขออภัย สินค้าแพ็กเกจนี้หมดสต็อกแล้ว' 
-                : `ขออภัย สต็อกสินค้าคงเหลือเพียง ${targetKeys.length} คีย์ (คุณต้องการ ${numToPull} คีย์)` 
-            };
-          }
-
-          const now = Date.now();
-          const newBalance = currentReseller.balance - totalCost;
-
-          const batch = writeBatch(db);
-          batch.update(doc(db, 'partners', currentReseller.id), { balance: newBalance });
-
-          const redeemedKeys: LicenseKey[] = targetKeys.map(k => ({
-            ...k,
-            status: 'active',
-            redeemedBy: currentReseller.id,
-            redeemedAt: now,
-            durationDays: plan.days,
-            productId,
-            planId,
-          }));
-
-          redeemedKeys.forEach(k => {
-            batch.update(doc(db, 'keys', k.id), {
-              status: 'active',
-              redeemedBy: currentReseller.id,
-              redeemedAt: now,
-              durationDays: plan.days,
-              productId,
-              planId,
-            });
-          });
-
-          batch.update(doc(db, 'products', productId), {
-            soldCount: (product.soldCount || 0) + numToPull,
-          });
-
-          await batch.commit();
-
-          const targetKeyIds = new Set(targetKeys.map(k => k.id));
-          set(state => ({
-            currentReseller: state.currentReseller ? { ...state.currentReseller, balance: newBalance } : null,
-            partners: state.partners.map(p => p.id === currentReseller.id ? { ...p, balance: newBalance } : p),
-            products: state.products.map(p => p.id === productId ? { ...p, soldCount: (p.soldCount || 0) + numToPull } : p),
-            keys: state.keys.map(k => targetKeyIds.has(k.id) ? { ...k, status: 'active', redeemedBy: currentReseller.id, redeemedAt: now, durationDays: plan.days, productId, planId } : k),
-          }));
-
-          const { webhooks } = get();
-          if (webhooks?.resellerLogs?.enabled && webhooks?.resellerLogs?.url) {
-            const keyListStr = redeemedKeys.map(k => k.keyString).join('\n');
-            sendDiscordLog(webhooks.resellerLogs.url, {
-              embeds: [{
-                title: "🛒 สั่งซื้อสินค้าสำเร็จ (ดึงคีย์)",
-                description: `ตัวแทน **${currentReseller.username}** ได้ดึงคีย์ **${product.title}** (${plan.label}) จำนวน **${numToPull} คีย์**`,
-                color: COLORS.SUCCESS,
-                fields: [
-                  { name: "สินค้า", value: product.title, inline: true },
-                  { name: "แพ็กเกจ", value: plan.label, inline: true },
-                  { name: "จำนวน", value: `${numToPull} คีย์`, inline: true },
-                  { name: "ราคารวมที่จ่าย", value: `${totalCost} เครดิต`, inline: true },
-                  { name: "รายการคีย์ที่ได้รับ", value: `\`\`\`\n${keyListStr.slice(0, 1000)}\n\`\`\``, inline: false },
-                ],
-                timestamp: new Date().toISOString()
-              }]
-            });
-          }
-
-          generateCsrfToken();
-          return { success: true, keys: redeemedKeys, key: redeemedKeys[0] };
-        } catch (err: any) {
-          console.error("purchaseProductKey Error:", err);
-          return { success: false, error: err?.message || 'เกิดข้อผิดพลาดในการดึงคีย์' };
+          return `transaction_error:${error?.message || 'unknown'}`;
         } finally {
           releaseRedeemLock();
         }
@@ -1186,88 +873,33 @@ export const useStore = create<AdminState>()(
   )
 );
 
-export const initialCategories: Category[] = [
-  { id: 'cat_fivem', name: 'FIVEM', icon: 'Gamepad2', order: 0, createdAt: Date.now() },
-  { id: 'cat_panel_ios', name: 'PANEL IOS', icon: 'Smartphone', order: 1, createdAt: Date.now() },
-  { id: 'cat_apps', name: 'APP PREMIUM', icon: 'Sparkles', order: 2, createdAt: Date.now() },
-];
-
-export const initialProducts: Product[] = [
-  {
-    id: 'prod_rlzxteam',
-    title: 'RLZXTEAM',
-    description: 'RLZXTEAM v3.0 - iOS Cheat / Proxy iOS เข็มทิศ ใช้งานได้ 5 แอป ติดตั้งง่าย สั่งเดียวจบ!',
-    imageUrl: 'https://th01.web2u.xyz/pic/uploads/20260916_110254_9595f736.png',
-    categoryId: 'cat_panel_ios',
-    isPopular: true,
-    soldCount: 142,
-    createdAt: Date.now(),
-    plans: [
-      { id: 'plan_12h', days: 0.5, label: '12 ชั่วโมง', cost: 20 },
-      { id: 'plan_1d', days: 1, label: '1 วัน', cost: 35 },
-      { id: 'plan_3d', days: 3, label: '3 วัน', cost: 65 },
-      { id: 'plan_7d', days: 7, label: '7 วัน', cost: 120 },
-      { id: 'plan_15d', days: 15, label: '15 วัน', cost: 150 },
-      { id: 'plan_30d', days: 30, label: '30 วัน', cost: 300 },
-    ],
-  },
-  {
-    id: 'prod_unban_fivem',
-    title: 'UNBAN FIVEM',
-    description: 'โปรแกรมปลดแบน Fivem ไม่โดนย้อนหลัง ปลอดภัย ใช้งานได้ 100%',
-    imageUrl: 'https://th01.web2u.xyz/pic/uploads/20260916_110254_9595f736.png',
-    categoryId: 'cat_fivem',
-    isPopular: true,
-    soldCount: 1427,
-    createdAt: Date.now() - 10000,
-    plans: [
-      { id: 'plan_1d', days: 1, label: '1 วัน', cost: 200 },
-      { id: 'plan_7d', days: 7, label: '7 วัน', cost: 500 },
-      { id: 'plan_30d', days: 30, label: '30 วัน', cost: 1200 },
-    ],
-  }
-];
-
 export async function initFirebaseSync() {
   const globalConfigRef = doc(db, 'config', 'global');
-  
-  try {
-    const globalConfigSnap = await getDoc(globalConfigRef);
+  const globalConfigSnap = await getDoc(globalConfigRef);
 
-    if (!globalConfigSnap.exists()) {
-      const batch = writeBatch(db);
-      batch.set(globalConfigRef, { adminBalance: 90000000000000000 });
-      
-      initialPartners.forEach(p => {
-        batch.set(doc(db, 'partners', p.id), p);
-      });
-      
-      initialKeys.forEach(k => {
-        batch.set(doc(db, 'keys', k.id), k);
-      });
-      
-      initialPackages.forEach(p => {
-        batch.set(doc(db, 'packages', p.days.toString()), p);
-      });
-
-      initialCategories.forEach(c => {
-        batch.set(doc(db, 'categories', c.id), c);
-      });
-
-      initialProducts.forEach(pr => {
-        batch.set(doc(db, 'products', pr.id), pr);
-      });
-      
-      batch.set(doc(db, 'config', 'webhooks'), {
-        adminLogs: { url: '', enabled: false },
-        resellerLogs: { url: '', enabled: false },
-        systemLogs: { url: '', enabled: false }
-      });
-      
-      await batch.commit();
-    }
-  } catch (e: any) {
-    console.error("Firebase init getDoc failed (Quota Exceeded?):", e);
+  if (!globalConfigSnap.exists()) {
+    const batch = writeBatch(db);
+    batch.set(globalConfigRef, { adminBalance: 90000000000000000 });
+    
+    initialPartners.forEach(p => {
+      batch.set(doc(db, 'partners', p.id), p);
+    });
+    
+    initialKeys.forEach(k => {
+      batch.set(doc(db, 'keys', k.id), k);
+    });
+    
+    initialPackages.forEach(p => {
+      batch.set(doc(db, 'packages', p.days.toString()), p);
+    });
+    
+    batch.set(doc(db, 'config', 'webhooks'), {
+      adminLogs: { url: '', enabled: false },
+      resellerLogs: { url: '', enabled: false },
+      systemLogs: { url: '', enabled: false }
+    });
+    
+    await batch.commit();
   }
 
   onSnapshot(globalConfigRef, (docSnap: any) => {
@@ -1276,11 +908,9 @@ export async function initFirebaseSync() {
       useStore.setState({ 
         adminBalance: data.adminBalance,
         globalLogoUrl: data.logoUrl || null,
-        landingBgUrl: data.landingBgUrl || null,
         apiEndpoint: data.apiEndpoint || "",
         apiToken: data.apiToken || "",
-        adminPasswordHash: data.adminPasswordHash || null,
-        maintenanceMode: data.maintenanceMode || false
+        adminPasswordHash: data.adminPasswordHash || null
       });
     }
   });
@@ -1294,31 +924,12 @@ export async function initFirebaseSync() {
 
   onSnapshot(collection(db, 'partners'), (snapshot: any) => {
     const partners = snapshot.docs.map((doc: any) => doc.data() as Partner);
-    const { currentReseller } = useStore.getState();
-    if (currentReseller) {
-      const updatedReseller = partners.find(p => p.id === currentReseller.id);
-      if (updatedReseller) {
-        useStore.setState({ partners, currentReseller: updatedReseller });
-        return;
-      }
-    }
     useStore.setState({ partners });
   });
 
-  // Sync keys for both admin & resellers for real-time stock calculation
   onSnapshot(collection(db, 'keys'), (snapshot: any) => {
     const keys = snapshot.docs.map((doc: any) => doc.data() as LicenseKey);
     useStore.setState({ keys });
-  });
-
-  onSnapshot(collection(db, 'categories'), (snapshot: any) => {
-    const categories = snapshot.docs.map((doc: any) => doc.data() as Category);
-    useStore.setState({ categories: categories.sort((a: any, b: any) => a.order - b.order) });
-  });
-
-  onSnapshot(collection(db, 'products'), (snapshot: any) => {
-    const products = snapshot.docs.map((doc: any) => doc.data() as Product);
-    useStore.setState({ products: products.sort((a: any, b: any) => b.createdAt - a.createdAt) });
   });
 
   onSnapshot(collection(db, 'packages'), (snapshot: any) => {
