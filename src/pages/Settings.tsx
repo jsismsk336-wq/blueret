@@ -12,8 +12,9 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const { globalLogoUrl, updateGlobalLogo, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword } = useStore();
+  const { globalLogoUrl, updateGlobalLogo, landingBgUrl, updateLandingBgUrl, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword } = useStore();
   const [logoPreview, setLogoPreview] = useState<string | null>(globalLogoUrl);
+  const [localLandingBg, setLocalLandingBg] = useState<string>(landingBgUrl || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localApiEndpoint, setLocalApiEndpoint] = useState(apiEndpoint || '');
@@ -26,7 +27,8 @@ export function Settings() {
     setLocalApiEndpoint(apiEndpoint || '');
     setLocalApiToken(apiToken || '');
     setLocalWebhooks(webhooks);
-  }, [apiEndpoint, apiToken, webhooks]);
+    setLocalLandingBg(landingBgUrl || '');
+  }, [apiEndpoint, apiToken, webhooks, landingBgUrl]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,6 +262,40 @@ export function Settings() {
               {t('admin.saveLogoBtn')}
             </button>
           </div>
+        </div>
+      </motion.div>
+
+      {/* Landing Page Background Customization */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-[#161925] border border-gray-800/60 rounded-2xl p-6 max-w-xl mt-8">
+        <div className="flex items-center gap-2 text-white font-medium mb-3">
+          <ImagePlus size={18} className="text-red-500" />
+          <span>ตั้งค่ารูปภาพพื้นหลังหน้าแรก (Landing Page Background Image)</span>
+        </div>
+        
+        <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+          วาง URL รูปภาพพื้นหลังเพื่อเปลี่ยนภาพพื้นหลังหน้าแรกแบบกำหนดเอง
+          <br />
+          <span className="text-emerald-400 font-semibold">* หากปล่อยว่างไว้ ระบบจะใช้บรรยากาศพื้นหลังสีดำ-แดงออริจินัลสุดหรู 100% *</span>
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            value={localLandingBg}
+            onChange={(e) => setLocalLandingBg(e.target.value)}
+            placeholder="https://example.com/background.jpg"
+            className="flex-1 bg-[#0F111A] border border-gray-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-red-500"
+          />
+          <button
+            onClick={() => {
+              updateLandingBgUrl(localLandingBg.trim() || null);
+              toast.success('บันทึกรูปพื้นหลังหน้าแรกแล้ว');
+            }}
+            className="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(230,0,0,0.3)] flex items-center justify-center gap-1.5"
+          >
+            <Save size={14} />
+            <span>บันทึก</span>
+          </button>
         </div>
       </motion.div>
 

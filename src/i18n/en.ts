@@ -6,7 +6,7 @@ export const en = {
     settings: 'Security Settings',
     resetRequests: 'Reset Requests',
     announcements: 'Announcements',
-    adminTitle: 'BLUERET Admin',
+    adminTitle: 'LUCKY Admin',
     adminRole: 'Main Administrator'
   },
   layout: {

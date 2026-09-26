@@ -2,7 +2,7 @@ import { useStore } from '../../store/useStore';
 
 export function NeonLogo({ className = '', size = 'sm' }: { className?: string, size?: 'sm' | 'md' | 'lg' }) {
   const { globalLogoUrl } = useStore();
-  const text = " BLUERET • BLUERET • BLUERET • ";
+  const text = " LUCKY • LUCKY • LUCKY • ";
   const chars = text.split('');
 
   const config = {

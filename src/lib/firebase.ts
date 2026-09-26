@@ -2,13 +2,13 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDZ8diiXPpwWbaL1vwpoLtCvub--jvPIQ0",
-  authDomain: "blueret-db.firebaseapp.com",
-  projectId: "blueret-db",
-  storageBucket: "blueret-db.firebasestorage.app",
-  messagingSenderId: "564353405412",
-  appId: "1:564353405412:web:87a227461e4132760577f1",
-  measurementId: "G-PXKM2B69L6"
+  apiKey: "AIzaSyBiiVxN8y0BDJtm0nGGb5sMd6eBulNxzSw",
+  authDomain: "lucky-db-4cca9.firebaseapp.com",
+  projectId: "lucky-db-4cca9",
+  storageBucket: "lucky-db-4cca9.firebasestorage.app",
+  messagingSenderId: "714417643330",
+  appId: "1:714417643330:web:8112a9272db60c97b6b2db",
+  measurementId: "G-4EWVJV5VQ8"
 };
 
 // Initialize Firebase

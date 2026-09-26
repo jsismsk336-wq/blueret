@@ -1,4 +1,4 @@
-import { Users, KeyRound, CheckCircle, Coins, Plus, Search, Shield, Settings2, Trash2 } from 'lucide-react';
+import { Users, KeyRound, CheckCircle, Coins, Plus, Search, Shield, Settings2, Trash2, PackagePlus } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { motion } from 'framer-motion';
@@ -92,6 +92,12 @@ export function Overview() {
           {t('admin.quickCommand')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <Link to="/dashboard/products" className="flex items-center justify-center gap-3 bg-gradient-to-br from-red-500/10 to-rose-500/5 hover:from-red-500/20 hover:to-rose-500/10 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 p-3.5 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(230,0,0,0.15)] group">
+            <div className="p-1.5 bg-red-500/10 rounded-lg group-hover:scale-110 transition-transform">
+              <PackagePlus size={16} />
+            </div>
+            <span className="text-sm font-medium">สินค้า & หมวดหมู่</span>
+          </Link>
           <Link to="/dashboard/partners" className="flex items-center justify-center gap-3 bg-gradient-to-br from-green-500/10 to-emerald-500/5 hover:from-green-500/20 hover:to-emerald-500/10 text-green-400 hover:text-green-300 border border-green-500/20 hover:border-green-500/40 p-3.5 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.15)] group">
             <div className="p-1.5 bg-green-500/10 rounded-lg group-hover:scale-110 transition-transform">
               <Plus size={16} />
@@ -110,15 +116,6 @@ export function Overview() {
             </div>
             <span className="text-sm font-medium">{t('admin.securitySettings')}</span>
           </Link>
-          <button 
-            onClick={() => setIsPackageSettingsModalOpen(true)}
-            className="flex items-center justify-center gap-3 bg-gradient-to-br from-orange-500/10 to-amber-500/5 hover:from-orange-500/20 hover:to-amber-500/10 text-orange-400 hover:text-orange-300 border border-orange-500/20 hover:border-orange-500/40 p-3.5 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.15)] group"
-          >
-            <div className="p-1.5 bg-orange-500/10 rounded-lg group-hover:scale-110 transition-transform">
-              <Settings2 size={16} />
-            </div>
-            <span className="text-sm font-medium">{t('admin.packageSettings')}</span>
-          </button>
         </div>
       </motion.div>
 

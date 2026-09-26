@@ -12,6 +12,7 @@ import { ResellerHistory } from './pages/ResellerHistory';
 import { ResellerAnnouncements } from './pages/ResellerAnnouncements';
 import { ResetRequests } from './pages/ResetRequests';
 import { Announcements } from './pages/Announcements';
+import { CategoriesProducts } from './pages/CategoriesProducts';
 import { initFirebaseSync, useStore } from './store/useStore';
 import { useEffect, useState } from 'react';
 
@@ -79,6 +80,7 @@ function App() {
           <Route path="/dashboard" element={<AdminLayout />}>
             <Route index element={<Navigate to="/dashboard/overview" replace />} />
             <Route path="overview" element={<Overview />} />
+            <Route path="products" element={<CategoriesProducts />} />
             <Route path="partners" element={<Partners />} />
             <Route path="keys" element={<Keys />} />
             <Route path="settings" element={<Settings />} />

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { ShieldAlert, Users, Key, Lock, X, RefreshCw, Globe, Megaphone } from 'lucide-react';
+import { ShieldAlert, Users, Key, Lock, X, RefreshCw, Globe, Megaphone, PackagePlus } from 'lucide-react';
 import { NeonLogo } from '../ui/NeonLogo';
 import { useStore } from '../../store/useStore';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -16,6 +16,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const menuItems = [
     { path: '/dashboard', label: t('sidebar.overview'), icon: ShieldAlert },
+    { path: '/dashboard/products', label: 'สินค้า & หมวดหมู่', icon: PackagePlus },
     { path: '/dashboard/partners', label: t('sidebar.partners'), icon: Users },
     { path: '/dashboard/keys', label: t('sidebar.keys'), icon: Key },
     { path: '/dashboard/announcements', label: t('sidebar.announcements'), icon: Megaphone },

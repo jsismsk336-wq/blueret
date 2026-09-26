@@ -63,7 +63,7 @@ export function ResellerLayout() {
             <NeonLogo className="w-full h-full scale-110" />
           </div>
           <div className="flex flex-col flex-1 min-w-0">
-            <h1 className="text-white font-bold tracking-wider">BLUERET</h1>
+            <h1 className="text-white font-bold tracking-wider">LUCKY</h1>
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse"></div>
               <span className="text-blue-400 text-[10px] font-bold truncate">{partner?.username ?? 'Reseller'}</span>

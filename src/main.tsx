@@ -8,7 +8,7 @@ import { useStore } from './store/useStore.ts'
 // When another tab redeems keys, this tab's store gets updated immediately
 // so the same key can never be given to two different resellers
 if (typeof BroadcastChannel !== 'undefined') {
-  const channel = new BroadcastChannel('blueret-keys');
+  const channel = new BroadcastChannel('lucky-keys');
   channel.onmessage = (event) => {
     if (event.data?.type === 'KEYS_REDEEMED') {
       const redeemedIds: Set<string> = new Set(event.data.redeemedIds);

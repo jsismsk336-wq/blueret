@@ -34,7 +34,7 @@ export function AdminLayout() {
             <div className="w-8 h-8">
               <NeonLogo className="w-full h-full" />
             </div>
-            <span className="font-bold text-white tracking-wider text-sm">BLUERET แอดมิน</span>
+            <span className="font-bold text-white tracking-wider text-sm">LUCKY แอดมิน</span>
           </div>
           <button
             onClick={() => setSidebarOpen(true)}
